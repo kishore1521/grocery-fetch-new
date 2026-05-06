@@ -246,32 +246,51 @@ Current stores:
 ### TABLE: products
 Product catalog.
 ```
-id           uuid  PK
-name         text  (e.g. 'Whole Milk')
-brand        text  (e.g. 'Garelick Farms')
-category     text  (produce/dairy/meat/bakery/frozen/pantry/beverages/household/deli/other)
-unit         text  (e.g. '1 Gallon', 'Per Lb', '1 Dozen')
-image_url    text
-upc          text  (barcode — critical for accurate matching)
-description  text
+id             uuid  PK
+name           text  (e.g. 'Whole Milk')
+brand          text  (e.g. 'Garelick Farms') — null for generic/store-brand items
+category       text  (produce/dairy/meat/bakery/frozen/pantry/beverages/household/deli/other)
+unit           text  (e.g. '1 Gallon', 'Per Lb', '1 Dozen')
+concept        text  generic search term user types (e.g. 'milk', 'eggs', 'bread')
+variant_type   text  differentiator within concept (e.g. 'Whole Milk', '2%', 'Almond Milk')
+size_label     text  human readable size (e.g. '1 Gallon', '1 Dozen', 'Per Lb')
+sort_order     integer  display order within concept group
+is_store_brand boolean  true if store-exclusive brand
+image_url      text
+upc            text  (barcode — critical for accurate matching)
+description    text
 ```
 
-Current products: Whole Milk, Large Eggs, Boneless Chicken Breast,
-White Sandwich Bread, Orange Juice.
+concept = the generic word a user types when searching ('milk', 'eggs', 'bread')
+variant_type = what makes this product distinct within the concept group
+is_store_brand = true for Bowl&Basket, Kirkland, etc. — brand field is null for these
+brand = set for national brands (e.g. 'Tropicana'), null for generics/store brands
+
+Current catalog: 72 real products across 5 Deer Park area stores.
 
 ### TABLE: prices
 The core price data. One row per product × store combination.
 ```
-id             uuid  PK
-product_id     uuid  FK → products.id
-store_id       uuid  FK → stores.id
-regular_price  decimal(10,2)
-loyalty_price  decimal(10,2)  nullable
-sale_price     decimal(10,2)  nullable
-in_stock       boolean  default true
-last_updated   timestamp  default now()
-source         text  ('manual','receipt','community')
+id               uuid  PK
+product_id       uuid  FK → products.id
+store_id         uuid  FK → stores.id
+regular_price    decimal(10,2)
+loyalty_price    decimal(10,2)  nullable
+sale_price       decimal(10,2)  nullable
+in_stock         boolean  default true
+last_updated     timestamp  default now()
+source           text  ('manual','receipt','community')
+store_brand_name text  nullable — brand this store sells for generic products
+price_per_unit   decimal(10,2)  nullable — per-unit cost for bulk store packs
 ```
+
+store_brand_name = the brand name this store sells for generic/store-brand rows
+  e.g. ShopRite rows: 'Bowl & Basket'
+  e.g. Stop & Shop rows: 'Stop & Shop brand'
+  e.g. national brand rows: null (brand lives on products table)
+price_per_unit = single-unit cost for bulk packs (BJ's, Costco)
+  e.g. BJ's sells 2-pack OJ for $9.99 → price_per_unit = $4.99
+  e.g. regular grocery stores: price_per_unit = regular_price
 
 ### TABLE: grocery_lists
 Named grocery lists per user.
@@ -697,12 +716,12 @@ DO NOT BUILD (V2+):
 
 ## CURRENT STATUS
 
-Week: 1 — Auth + Onboarding
+Week: 2 — Grocery List (in progress)
 Active branch: main
-Last completed: Week 0 — app running on device
-Currently building: Login screen
+Last completed: Full database — 72 products, 5 stores, 384 prices
+Currently building: Add-item experience rebuild (concept-based search)
 Known issues: None
-Next action: Build login screen UI
+Next action: Rebuild add-item UX with grouped product search
 
 ---
 
@@ -723,3 +742,9 @@ Next action: Build login screen UI
 | May 2026 | Manually install expo-linking, react-native-screens | Claude Code missed these  |
 | May 2026 | Added handle_new_user trigger         | public.users needs row before user_preferences insert |
 | May 2026 | Added unique constraint on user_preferences.user_id | Required for upsert onConflict |
+| May 2026 | Added concept/variant_type/size_label to products | Powers grouped search UX |
+| May 2026 | Added store_brand_name to prices      | Tracks which brand each store sells per product |
+| May 2026 | Added price_per_unit to prices        | Enables fair bulk comparison for BJ's and Costco |
+| May 2026 | Replaced 5 dummy products with 72 real products | Full catalog across 5 Deer Park area stores |
+| May 2026 | Replaced dummy stores with 5 real Deer Park stores | ShopRite, Stop&Shop, Aldi, BJs, Costco |
+| May 2026 | Generic product names for store brand items | Bowl&Basket/Kirkland etc tracked in store_brand_name on prices |
