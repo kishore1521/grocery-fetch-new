@@ -721,3 +721,5 @@ Next action: Build login screen UI
 | May 2026 | 13 features for V1, strict scope      | 4-6 week timeline requires focus          |
 | May 2026 | Pin reanimated@3.16.7                 | v4+ needs worklets, incompatible with Expo 54 |
 | May 2026 | Manually install expo-linking, react-native-screens | Claude Code missed these  |
+| May 2026 | Added handle_new_user trigger         | public.users needs row before user_preferences insert |
+| May 2026 | Added unique constraint on user_preferences.user_id | Required for upsert onConflict |
