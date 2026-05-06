@@ -697,13 +697,12 @@ DO NOT BUILD (V2+):
 
 ## CURRENT STATUS
 
-Week: 0 — Setup
+Week: 1 — Auth + Onboarding
 Active branch: main
-Last completed: Expo project initialized, pushed to GitHub,
-                Supabase schema finalized with all indexes
-Currently building: Week 1 — Auth + Onboarding
-Known issues: None yet
-Next action: Install dependencies and configure NativeWind
+Last completed: Week 0 — app running on device
+Currently building: Login screen
+Known issues: None
+Next action: Build login screen UI
 
 ---
 
@@ -720,3 +719,5 @@ Next action: Install dependencies and configure NativeWind
 | May 2026 | TypeScript strict mode                | Better AI assistance, catches errors early|
 | May 2026 | 5 stores only for V1                  | Data quality over coverage                |
 | May 2026 | 13 features for V1, strict scope      | 4-6 week timeline requires focus          |
+| May 2026 | Pin reanimated@3.16.7                 | v4+ needs worklets, incompatible with Expo 54 |
+| May 2026 | Manually install expo-linking, react-native-screens | Claude Code missed these  |
