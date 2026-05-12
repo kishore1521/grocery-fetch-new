@@ -152,19 +152,26 @@ export async function searchProductsByConcept(
       conceptMap[opt.concept] = {}
     }
 
-    const sizeKey = opt.variant_type + '||' + opt.size_label
+    const variant = opt.variant_type || 'Other'
+    const size = opt.size_label || ''
+    const sizeKey = variant + '||' + size
 
     if (!conceptMap[opt.concept][sizeKey]) {
       conceptMap[opt.concept][sizeKey] = []
     }
 
-    // Deduplicate by store_chain — keep cheapest per chain
+    // Deduplicate by store_chain + product_id — keep cheapest for the
+    // exact same product at the same store, but allow different products
+    // (e.g. store brand vs national brand) to appear as separate cards
+    // even when sold at the same chain.
     const existing = conceptMap[opt.concept][sizeKey]
-    const sameChain = existing.find(o => o.store_chain === opt.store_chain)
-    if (!sameChain || opt.effective_price < sameChain.effective_price) {
-      const filtered = existing.filter(o => o.store_chain !== opt.store_chain)
-      filtered.push(opt)
-      conceptMap[opt.concept][sizeKey] = filtered
+    const duplicate = existing.find(
+      o => o.store_chain === opt.store_chain && o.product_id === opt.product_id
+    )
+    if (!duplicate) {
+      existing.push(opt)
+    } else if (opt.effective_price < duplicate.effective_price) {
+      existing[existing.indexOf(duplicate)] = opt
     }
 
     // Track sort order for concept

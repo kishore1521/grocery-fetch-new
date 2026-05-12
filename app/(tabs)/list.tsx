@@ -15,9 +15,9 @@ import {
   Image,
   Dimensions,
 } from 'react-native'
-import Svg, { Path, Circle, Line, Polyline } from 'react-native-svg'
-
-import { SafeAreaView } from 'react-native-safe-area-context'
+import Svg, { Path, Circle, Line } from 'react-native-svg'
+import { LinearGradient } from 'expo-linear-gradient'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { colors } from '../../constants/colors'
 import { useAuthStore } from '../../stores/authStore'
@@ -43,49 +43,40 @@ const SearchIconSVG = () => (
   </Svg>
 )
 
-// ─── Helper functions ─────────────────────────────────────────────────────────
-
-const getCategoryColor = (category: string): string => {
-  const map: Record<string, string> = {
-    produce:   '#4CAF50',
-    dairy:     '#2196F3',
-    meat:      '#F44336',
-    bakery:    '#FF9800',
-    beverages: '#00BCD4',
-    frozen:    '#9C27B0',
-    pantry:    '#795548',
-    household: '#607D8B',
-    deli:      '#FF5722',
-    other:     '#9E9E9E',
-  }
-  return map[category] || '#9E9E9E'
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getStoreColor = (chain: string): string => {
   const map: Record<string, string> = {
-    'ShopRite':   '#CC0000',
+    'ShopRite':    '#CC0000',
     'Stop & Shop': '#007A3D',
-    'Aldi':       '#1E3A5F',
-    'BJs':        '#0047AB',
-    'Costco':     '#005DAA',
-    'Walmart':    '#0071CE',
-    'Target':     '#E53935',
+    'Aldi':        '#1E3A5F',
+    'BJs':         '#0047AB',
+    'Costco':      '#005DAA',
+    'Walmart':     '#0071CE',
+    'Target':      '#E53935',
   }
-  return map[chain] || '#4B5563'
+  return map[chain] || '#475569'
 }
-
-// ─── Category ordering ────────────────────────────────────────────────────────
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'bakery',
-  'beverages', 'frozen', 'pantry',
-  'household', 'deli', 'other',
+  'beverages', 'frozen', 'pantry', 'household', 'deli', 'other',
 ]
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, string> = {
+  produce:   '#00A651',
+  dairy:     '#2563EB',
+  meat:      '#EF4444',
+  bakery:    '#F97316',
+  beverages: '#06B6D4',
+  frozen:    '#8B5CF6',
+  pantry:    '#78716C',
+  household: '#64748B',
+  deli:      '#F97316',
+  other:     '#94A3B8',
+}
 
 const BUDGET_PRESETS = [100, 150, 200, 250, 300, 400]
-
 
 const UNIT_OPTIONS = [
   'each', 'pack', 'lb', 'oz',
@@ -96,6 +87,7 @@ const UNIT_OPTIONS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ListScreen() {
+  const insets = useSafeAreaInsets()
   const { session, isGuest } = useAuthStore()
   const {
     items,
@@ -110,7 +102,7 @@ export default function ListScreen() {
     addProductToListById,
   } = useList()
 
-  // ── Input / search state ─────────────────────────────────────────────────
+  // ── Input / search state ──────────────────────────────────────────────────
   const [keyboardHeight, setKeyboardHeight] = useState(0)
   const [isInputFocused, setIsInputFocused] = useState(false)
   const [inputText, setInputText] = useState('')
@@ -123,19 +115,19 @@ export default function ListScreen() {
   const [addedConfirm, setAddedConfirm] = useState<string | null>(null)
   const inputRef = useRef<TextInput>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const INPUT_BAR_HEIGHT = 66
+  const INPUT_BAR_HEIGHT = 72
 
-  // ── Mini form state ──────────────────────────────────────────────────────
+  // ── Mini form state ───────────────────────────────────────────────────────
   const [showingMiniForm, setShowingMiniForm] = useState(false)
   const [isInMiniForm, setIsInMiniForm] = useState(false)
   const [miniFormQty, setMiniFormQty] = useState(1)
   const [miniFormUnit, setMiniFormUnit] = useState('each')
   const [miniFormNote, setMiniFormNote] = useState('')
 
-  // ── Delete reveal state ──────────────────────────────────────────────────
+  // ── Delete reveal state ───────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // ── Checkbox animations ──────────────────────────────────────────────────
+  // ── Checkbox animations ───────────────────────────────────────────────────
   const checkAnimations = useRef<Record<string, Animated.Value>>({})
 
   const getCheckAnim = (id: string): Animated.Value => {
@@ -154,7 +146,7 @@ export default function ListScreen() {
     toggleChecked(id)
   }
 
-  // ── Skeleton pulse animation ─────────────────────────────────────────────
+  // ── Skeleton pulse ────────────────────────────────────────────────────────
   const skeletonOpacity = useRef(new Animated.Value(0.4)).current
 
   useEffect(() => {
@@ -166,7 +158,7 @@ export default function ListScreen() {
     ).start()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Budget state ─────────────────────────────────────────────────────────
+  // ── Budget state ──────────────────────────────────────────────────────────
   const [budget, setBudget] = useState<number | null>(null)
   const [spentSoFar, setSpentSoFar] = useState(0)
   const [tripCount, setTripCount] = useState(0)
@@ -174,12 +166,12 @@ export default function ListScreen() {
   const [budgetInput, setBudgetInput] = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
 
-  // ── Fetch list on mount ──────────────────────────────────────────────────
+  // ── Fetch list on mount ───────────────────────────────────────────────────
   useEffect(() => {
     if (!isGuest) fetchActiveList()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Fetch budget on mount ────────────────────────────────────────────────
+  // ── Fetch budget on mount ─────────────────────────────────────────────────
   useEffect(() => {
     if (isGuest || !session?.user.id) return
     const monthYear = new Date().toISOString().slice(0, 7)
@@ -198,7 +190,7 @@ export default function ListScreen() {
       })
   }, [session?.user.id, isGuest])
 
-  // ── Keyboard listeners ───────────────────────────────────────────────────
+  // ── Keyboard listeners ────────────────────────────────────────────────────
   useEffect(() => {
     const showSub = Keyboard.addListener(
       'keyboardWillShow',
@@ -208,13 +200,10 @@ export default function ListScreen() {
       'keyboardWillHide',
       () => setKeyboardHeight(0)
     )
-    return () => {
-      showSub.remove()
-      hideSub.remove()
-    }
+    return () => { showSub.remove(); hideSub.remove() }
   }, [])
 
-  // ── Search with debounce ─────────────────────────────────────────────────
+  // ── Search with debounce ──────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     setShowingMiniForm(false)
@@ -250,12 +239,10 @@ export default function ListScreen() {
       }
     }, 300)
 
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [inputText])
 
-  // ── Save budget ──────────────────────────────────────────────────────────
+  // ── Save budget ───────────────────────────────────────────────────────────
   const saveBudget = async () => {
     const amount = parseFloat(budgetInput)
     if (!amount || amount <= 0 || !session?.user.id) return
@@ -279,7 +266,7 @@ export default function ListScreen() {
     }
   }
 
-  // ── Estimated cost ───────────────────────────────────────────────────────
+  // ── Estimated cost ────────────────────────────────────────────────────────
   const estimatedCost = React.useMemo(() => {
     return items.reduce((sum, item) => {
       if (item.price_at_add) return sum + item.price_at_add * item.quantity
@@ -287,7 +274,7 @@ export default function ListScreen() {
     }, 0)
   }, [items])
 
-  // ── Group items by category ──────────────────────────────────────────────
+  // ── Group items by category ───────────────────────────────────────────────
   const groupedSections = React.useMemo(() => {
     const groups: Record<string, GroceryListItem[]> = {}
     items.forEach(item => {
@@ -300,10 +287,7 @@ export default function ListScreen() {
       .map(cat => ({ title: cat, data: groups[cat] }))
   }, [items])
 
-  // ── Completion state ─────────────────────────────────────────────────────
   const allChecked = items.length > 0 && items.every(i => i.is_checked)
-
-  // ── Budget helpers ───────────────────────────────────────────────────────
   const budgetProgress = budget && budget > 0 ? Math.min(spentSoFar / budget, 1) : 0
   const budgetRemaining = budget ? Math.max(budget - spentSoFar, 0) : null
   const isOverBudget = budget ? spentSoFar > budget : false
@@ -314,25 +298,32 @@ export default function ListScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle}>My List</Text>
-            <Text style={styles.headerSub}>Loading...</Text>
-          </View>
-        </View>
-        <Animated.View style={{ opacity: skeletonOpacity }}>
-          {[1, 2, 3, 4].map(i => (
-            <View key={i} style={styles.skeletonCard}>
-              <View style={styles.skeletonCircle} />
-              <View style={styles.skeletonContent}>
-                <View style={styles.skeletonLine} />
-                <View style={styles.skeletonLineShort} />
-              </View>
+      <View style={styles.root}>
+        <LinearGradient
+          colors={[colors.heroDark, colors.heroMid, colors.heroLight]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.heroSkeleton}
+        >
+          <SafeAreaView edges={['top']}>
+            <View style={styles.heroInner}>
+              <Text style={styles.heroTitle}>My List</Text>
             </View>
-          ))}
-        </Animated.View>
-      </SafeAreaView>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.sheetContainer}>
+          <Animated.View style={{ opacity: skeletonOpacity }}>
+            {[1, 2, 3, 4].map(i => (
+              <View key={i} style={styles.skeletonCard}>
+                <View style={styles.skeletonCircle} />
+                <View style={styles.skeletonContent}>
+                  <View style={styles.skeletonLine} />
+                  <View style={styles.skeletonLineShort} />
+                </View>
+              </View>
+            ))}
+          </Animated.View>
+        </View>
+      </View>
     )
   }
 
@@ -342,18 +333,26 @@ export default function ListScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle}>My List</Text>
-          </View>
+      <View style={styles.root}>
+        <LinearGradient
+          colors={[colors.heroDark, colors.heroMid, colors.heroLight]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.heroSkeleton}
+        >
+          <SafeAreaView edges={['top']}>
+            <View style={styles.heroInner}>
+              <Text style={styles.heroTitle}>My List</Text>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.sheetContainer}>
+          <TouchableOpacity style={styles.errorState} onPress={fetchActiveList} activeOpacity={0.7}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>Couldn't load your list</Text>
+            <Text style={styles.errorSub}>Tap to try again</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.errorState} onPress={fetchActiveList} activeOpacity={0.7}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Couldn't load your list</Text>
-          <Text style={styles.errorSub}>Tap to try again</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     )
   }
 
@@ -362,247 +361,254 @@ export default function ListScreen() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.root}>
 
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My List</Text>
-          <Text style={styles.headerSub}>
-            {items.length} item{items.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-        {items.some(i => i.is_checked) && (
-          <TouchableOpacity onPress={clearChecked} style={styles.clearBtn}>
-            <Text style={styles.clearBtnText}>Clear done</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* ── HERO ── */}
+      <LinearGradient
+        colors={[colors.heroDark, colors.heroMid, colors.heroLight]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        {/* Decorative circles */}
+        <View style={styles.heroCircle1} />
+        <View style={styles.heroCircle2} />
 
-      {/* ── Budget card ── */}
-      <View style={styles.budgetCard}>
-        {budget ? (
-          <>
-            <View style={styles.budgetRow}>
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetStatLabel}>BUDGET</Text>
-                <Text style={styles.budgetStatValue}>${budget.toFixed(0)}</Text>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.heroInner}>
+            {/* Top row */}
+            <View style={styles.heroTopRow}>
+              <View>
+                <Text style={styles.heroLabel}>GROCERY LIST</Text>
+                <Text style={styles.heroTitle}>My List</Text>
               </View>
-              <View style={styles.budgetDivider} />
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetStatLabel}>EST. COST</Text>
-                <Text style={styles.budgetStatValue}>
-                  {estimatedCost > 0 ? `$${estimatedCost.toFixed(2)}` : '$--'}
-                </Text>
-              </View>
-              <View style={styles.budgetDivider} />
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetStatLabel}>SPENT</Text>
-                <Text style={[styles.budgetStatValue, isOverBudget && styles.budgetOver]}>
-                  ${spentSoFar.toFixed(2)}
-                </Text>
-              </View>
+              {items.some(i => i.is_checked) && (
+                <TouchableOpacity onPress={clearChecked} style={styles.heroClearBtn}>
+                  <Text style={styles.heroClearText}>Clear done</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
+
+            {/* Budget stats row */}
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatValue}>{items.length}</Text>
+                <Text style={styles.heroStatLabel}>items</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatValue}>
+                  {estimatedCost > 0 ? `$${estimatedCost.toFixed(0)}` : '$--'}
+                </Text>
+                <Text style={styles.heroStatLabel}>est. cost</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <TouchableOpacity
+                style={styles.heroStat}
+                onPress={() => {
+                  setBudgetInput(budget ? budget.toFixed(0) : '')
+                  setBudgetModalVisible(true)
+                }}
+              >
+                {budget ? (
+                  <>
+                    <Text style={[
+                      styles.heroStatValue,
+                      isOverBudget && { color: '#FCA5A5' },
+                    ]}>
+                      ${budgetRemaining?.toFixed(0)}
+                    </Text>
+                    <Text style={styles.heroStatLabel}>left of ${budget.toFixed(0)}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.heroStatValueMuted}>Set budget</Text>
+                    <Text style={styles.heroStatLabel}>tap to add</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Budget progress bar */}
+            {budget && (
+              <View style={styles.heroBudgetBar}>
+                <View style={[
+                  styles.heroBudgetFill,
                   {
                     width: `${budgetProgress * 100}%` as `${number}%`,
-                    backgroundColor: isOverBudget ? '#F44336' : colors.primary,
+                    backgroundColor: isOverBudget ? '#FCA5A5' : 'rgba(255,255,255,0.9)',
                   },
-                ]}
-              />
-            </View>
-            <View style={styles.budgetBottomRow}>
-              <Text style={styles.budgetRemainingText}>
-                {budgetRemaining !== null
-                  ? isOverBudget
-                    ? `$${(spentSoFar - budget!).toFixed(2)} over budget`
-                    : `$${budgetRemaining.toFixed(2)} remaining · ${tripCount} trip${tripCount !== 1 ? 's' : ''}`
-                  : ''}
-              </Text>
-              <TouchableOpacity onPress={() => { setBudgetInput(budget.toFixed(0)); setBudgetModalVisible(true) }}>
-                <Text style={styles.budgetEditLink}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <View style={styles.budgetEmpty}>
-            <View style={styles.budgetEmptyLeft}>
-              <Text style={styles.budgetEmptyLabel}>GROCERY BUDGET</Text>
-              <Text style={styles.budgetEmptyHint}>Set a monthly budget to track spending</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.budgetSetBtn}
-              onPress={() => { setBudgetInput(''); setBudgetModalVisible(true) }}
-            >
-              <Text style={styles.budgetSetBtnText}>Set budget</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* ── List ── */}
-      <SectionList
-        style={styles.list}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: keyboardHeight + 100 },
-        ]}
-        sections={groupedSections}
-        keyExtractor={item => item.id}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        onScrollBeginDrag={() => setDeletingId(null)}
-        ListHeaderComponent={
-          allChecked ? (
-            <View style={styles.completionBanner}>
-              <View style={styles.completionLeft}>
-                <View style={styles.completionCheck}>
-                  <Text style={styles.completionCheckText}>✓</Text>
-                </View>
-                <View>
-                  <Text style={styles.completionTitle}>All done! 🎉</Text>
-                  <Text style={styles.completionSub}>Scan receipt to track savings</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.completionBtn}
-                onPress={() => router.push('/receipt/upload')}
-              >
-                <Text style={styles.completionBtnText}>Scan →</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        }
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionBar, { backgroundColor: getCategoryColor(section.title) }]} />
-            <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
-            <Text style={styles.sectionCount}>{section.data.length}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <View key={item.id}>
-            <TouchableOpacity
-              style={styles.itemCard}
-              onLongPress={() => setDeletingId(item.id)}
-              onPress={() => {
-                if (deletingId === item.id) setDeletingId(null)
-              }}
-              activeOpacity={0.95}
-            >
-              {/* Checkbox */}
-              <TouchableOpacity onPress={() => handleToggle(item.id)}>
-                <Animated.View
-                  style={[
-                    styles.checkbox,
-                    item.is_checked && styles.checkboxChecked,
-                    { transform: [{ scale: getCheckAnim(item.id) }] },
-                  ]}
-                >
-                  {item.is_checked && <Text style={styles.checkmark}>✓</Text>}
-                </Animated.View>
-              </TouchableOpacity>
-
-              {/* Item info */}
-              <View style={styles.itemContent}>
-                <Text style={[styles.itemName, item.is_checked && styles.itemNameChecked]}>
-                  {item.custom_item_name || item.product?.name || 'Item'}
-                </Text>
-                {item.product?.brand && (
-                  <Text style={styles.itemSub}>
-                    {item.product.brand}
-                    {item.unit ? ' · ' + item.unit : ''}
-                  </Text>
-                )}
-                {!item.product?.brand && item.unit && (
-                  <Text style={styles.itemSub}>{item.unit}</Text>
-                )}
-                {item.notes && (
-                  <Text style={styles.itemNote}>{item.notes}</Text>
-                )}
-              </View>
-
-              {/* Qty + price */}
-              <View style={styles.itemRight}>
-                <View style={styles.qtyRow}>
-                  <TouchableOpacity
-                    style={styles.qtyBtn}
-                    onPress={() => {
-                      if (item.quantity <= 1) {
-                        setDeletingId(item.id)
-                      } else {
-                        updateQuantity(item.id, item.quantity - 1)
-                      }
-                    }}
-                  >
-                    <Text style={styles.qtyBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.qtyCount}>{item.quantity}</Text>
-                  <TouchableOpacity
-                    style={styles.qtyBtn}
-                    onPress={() => updateQuantity(item.id, item.quantity + 1)}
-                  >
-                    <Text style={styles.qtyBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.itemPrice}>{item.product_id ? '$--' : '?'}</Text>
-              </View>
-            </TouchableOpacity>
-
-            {deletingId === item.id && (
-              <View style={styles.deleteRow}>
-                <TouchableOpacity
-                  style={styles.deleteConfirmBtn}
-                  onPress={() => {
-                    deleteItem(item.id)
-                    setDeletingId(null)
-                  }}
-                >
-                  <Text style={styles.deleteConfirmText}>🗑 Remove item</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteCancelBtn}
-                  onPress={() => setDeletingId(null)}
-                >
-                  <Text style={styles.deleteCancelText}>Cancel</Text>
-                </TouchableOpacity>
+                ]} />
               </View>
             )}
           </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🛒</Text>
-            <Text style={styles.emptyTitle}>Your list is empty</Text>
-            <Text style={styles.emptySub}>
-              Tap "+ Add item to your list" below to start
-            </Text>
-          </View>
-        }
-      />
+        </SafeAreaView>
+      </LinearGradient>
 
-      {/* ── Search results panel ── */}
+      {/* ── WHITE SHEET ── */}
+      <View style={styles.sheetContainer}>
+
+        {/* Completion banner */}
+        {allChecked && (
+          <View style={styles.completionBanner}>
+            <View style={styles.completionLeft}>
+              <View style={styles.completionCheck}>
+                <Text style={styles.completionCheckText}>✓</Text>
+              </View>
+              <View>
+                <Text style={styles.completionTitle}>All done! 🎉</Text>
+                <Text style={styles.completionSub}>Scan your receipt to track savings</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.completionBtn}
+              onPress={() => router.push('/receipt/upload')}
+            >
+              <Text style={styles.completionBtnText}>Scan →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── SECTION LIST ── */}
+        <SectionList
+          style={styles.list}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: keyboardHeight + 100 },
+          ]}
+          sections={groupedSections}
+          keyExtractor={item => item.id}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          onScrollBeginDrag={() => setDeletingId(null)}
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeader}>
+              <View style={[
+                styles.sectionDot,
+                { backgroundColor: CATEGORY_COLORS[section.title] || colors.textTertiary },
+              ]} />
+              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+              <Text style={styles.sectionCount}>{section.data.length}</Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <View key={item.id}>
+              <TouchableOpacity
+                style={styles.itemCard}
+                onLongPress={() => setDeletingId(item.id)}
+                onPress={() => { if (deletingId === item.id) setDeletingId(null) }}
+                activeOpacity={0.97}
+              >
+                {/* Category accent */}
+                <View style={[
+                  styles.itemAccent,
+                  { backgroundColor: CATEGORY_COLORS[item.product?.category || 'other'] || colors.textTertiary },
+                ]} />
+
+                {/* Checkbox */}
+                <TouchableOpacity onPress={() => handleToggle(item.id)}>
+                  <Animated.View style={[
+                    styles.checkbox,
+                    item.is_checked && styles.checkboxChecked,
+                    { transform: [{ scale: getCheckAnim(item.id) }] },
+                  ]}>
+                    {item.is_checked && <Text style={styles.checkmark}>✓</Text>}
+                  </Animated.View>
+                </TouchableOpacity>
+
+                {/* Item info */}
+                <View style={styles.itemContent}>
+                  <Text style={[styles.itemName, item.is_checked && styles.itemNameChecked]}>
+                    {item.custom_item_name || item.product?.name || 'Item'}
+                  </Text>
+                  {item.product?.brand && (
+                    <Text style={styles.itemSub}>
+                      {item.product.brand}{item.unit ? ' · ' + item.unit : ''}
+                    </Text>
+                  )}
+                  {!item.product?.brand && item.unit && (
+                    <Text style={styles.itemSub}>{item.unit}</Text>
+                  )}
+                  {item.notes && (
+                    <Text style={styles.itemNote}>{item.notes}</Text>
+                  )}
+                </View>
+
+                {/* Qty + price */}
+                <View style={styles.itemRight}>
+                  <View style={styles.qtyRow}>
+                    <TouchableOpacity
+                      style={styles.qtyBtn}
+                      onPress={() => {
+                        if (item.quantity <= 1) {
+                          setDeletingId(item.id)
+                        } else {
+                          updateQuantity(item.id, item.quantity - 1)
+                        }
+                      }}
+                    >
+                      <Text style={styles.qtyBtnText}>−</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.qtyCount}>{item.quantity}</Text>
+                    <TouchableOpacity
+                      style={styles.qtyBtn}
+                      onPress={() => updateQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.itemPrice}>{item.product_id ? '$--' : '?'}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {deletingId === item.id && (
+                <View style={styles.deleteRow}>
+                  <TouchableOpacity
+                    style={styles.deleteConfirmBtn}
+                    onPress={() => { deleteItem(item.id); setDeletingId(null) }}
+                  >
+                    <Text style={styles.deleteConfirmText}>Remove item</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteCancelBtn}
+                    onPress={() => setDeletingId(null)}
+                  >
+                    <Text style={styles.deleteCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Text style={styles.emptyIcon}>🛒</Text>
+              </View>
+              <Text style={styles.emptyTitle}>Your list is empty</Text>
+              <Text style={styles.emptySub}>
+                Tap "Add item" below to start building your list
+              </Text>
+            </View>
+          }
+        />
+      </View>
+
+      {/* ── SEARCH RESULTS PANEL ── */}
       {isInputFocused && (
         <View style={[
           styles.resultsPanel,
           {
             bottom: INPUT_BAR_HEIGHT + keyboardHeight,
-            maxHeight: screenHeight - keyboardHeight - INPUT_BAR_HEIGHT - 100,
+            top: insets.top + 8,
           },
         ]}>
-
-          {/* Drag handle */}
           <View style={styles.resultsDragHandle} />
 
           <ScrollView
             keyboardShouldPersistTaps="always"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 12 }}
+            contentContainerStyle={{ paddingBottom: 16 }}
           >
-            {/* SEARCHING SKELETON */}
+            {/* Searching skeleton */}
             {searching && (
               <View style={styles.skeletonWrap}>
                 {[1, 2, 3].map(i => (
@@ -611,244 +617,267 @@ export default function ListScreen() {
               </View>
             )}
 
-            {/* RESULTS */}
+            {/* Results */}
             {!searching && searchResults.length > 0 && (
               searchResults.map(group => {
                 const isConceptOpen = expandedConcepts.has(group.concept)
                 return (
-                <View key={group.concept}>
+                  <View key={group.concept}>
 
-                  {/* ── MAIN CONCEPT HEADER ── */}
-                  <TouchableOpacity
-                    style={[
-                      styles.conceptHeader,
-                      isConceptOpen && styles.conceptHeaderOpen,
-                    ]}
-                    onPress={() => {
-                      if (isConceptOpen) {
-                        setExpandedConcepts(new Set())
-                        setExpandedSizes(new Set())
-                        setSelectedOption(null)
-                      } else {
-                        setExpandedConcepts(new Set([group.concept]))
-                        const firstSizeKey = group.sizes[0]?.key
-                        setExpandedSizes(
-                          firstSizeKey
-                            ? new Set([group.concept + '||' + firstSizeKey])
-                            : new Set()
-                        )
-                        setSelectedOption(null)
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.conceptHeaderContent}>
-                      <Text style={styles.conceptTitle}>
-                        {group.display_name}
+                    {/* Concept header */}
+                    <TouchableOpacity
+                      style={[
+                        styles.conceptHeader,
+                        isConceptOpen && styles.conceptHeaderOpen,
+                      ]}
+                      onPress={() => {
+                        if (isConceptOpen) {
+                          setExpandedConcepts(new Set())
+                          setExpandedSizes(new Set())
+                          setSelectedOption(null)
+                        } else {
+                          setExpandedConcepts(new Set([group.concept]))
+                          const firstSizeKey = group.sizes[0]?.key
+                          setExpandedSizes(
+                            firstSizeKey
+                              ? new Set([group.concept + '||' + firstSizeKey])
+                              : new Set()
+                          )
+                          setSelectedOption(null)
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[
+                        styles.conceptIconBadge,
+                        isConceptOpen && styles.conceptIconBadgeOpen,
+                      ]}>
+                        <Text style={[
+                          styles.conceptIconLetter,
+                          isConceptOpen && styles.conceptIconLetterOpen,
+                        ]}>
+                          {group.display_name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.conceptHeaderContent}>
+                        <Text style={[
+                          styles.conceptTitle,
+                          isConceptOpen && styles.conceptTitleOpen,
+                        ]}>
+                          {group.display_name}
+                        </Text>
+                        <Text style={styles.conceptSubline}>
+                          {group.sizes.length} option{group.sizes.length !== 1 ? 's' : ''}
+                          {' · '}from ${Math.min(...group.sizes.map(s => s.best_price)).toFixed(2)}
+                        </Text>
+                      </View>
+                      <Text style={[
+                        styles.conceptChevron,
+                        isConceptOpen && styles.conceptChevronOpen,
+                      ]}>
+                        {isConceptOpen ? '▴' : '▾'}
                       </Text>
-                      <Text style={styles.conceptSubline}>
-                        {group.sizes.length} size{group.sizes.length !== 1 ? 's' : ''}
-                        {' · '}from ${Math.min(...group.sizes.map(s => s.best_price)).toFixed(2)}
-                      </Text>
-                    </View>
-                    <Text style={styles.conceptChevron}>
-                      {isConceptOpen ? '▴' : '▾'}
-                    </Text>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
 
-                  {/* ── SIZE CHIPS + STORE CARDS ── */}
-                  {expandedConcepts.has(group.concept) && (
-                    <View>
+                    {/* Size chips + store cards */}
+                    {isConceptOpen && (
+                      <View style={styles.conceptBody}>
 
-                      {/* Horizontal size chip row */}
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        keyboardShouldPersistTaps="always"
-                        contentContainerStyle={styles.sizeChipsScroll}
-                      >
+                        {/* Horizontal size chips */}
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          keyboardShouldPersistTaps="always"
+                          contentContainerStyle={styles.sizeChipsScroll}
+                        >
+                          {group.sizes.map(size => {
+                            const k = group.concept + '||' + size.key
+                            const isActive = expandedSizes.has(k)
+                            return (
+                              <TouchableOpacity
+                                key={size.key}
+                                style={[styles.sizeChip, isActive && styles.sizeChipActive]}
+                                onPress={() => {
+                                  setExpandedSizes(prev =>
+                                    prev.has(k) ? new Set() : new Set([k])
+                                  )
+                                  setSelectedOption(null)
+                                }}
+                                activeOpacity={0.75}
+                              >
+                                <Text style={[styles.sizeChipLabel, isActive && styles.sizeChipLabelActive]}>
+                                  {size.variant_type && size.variant_type.toLowerCase() !== group.concept.toLowerCase()
+                                    ? `${size.variant_type}${size.size_label ? ' · ' + size.size_label : ''}`
+                                    : (size.size_label || size.variant_type)}
+                                </Text>
+                                <Text style={[styles.sizeChipPrice, isActive && styles.sizeChipPriceActive]}>
+                                  from ${size.best_price.toFixed(2)}
+                                </Text>
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </ScrollView>
+
+                        {/* Store cards for selected size */}
                         {group.sizes.map(size => {
                           const k = group.concept + '||' + size.key
-                          const isActive = expandedSizes.has(k)
+                          if (!expandedSizes.has(k)) return null
                           return (
-                            <TouchableOpacity
-                              key={size.key}
-                              style={[styles.sizeChip, isActive && styles.sizeChipActive]}
-                              onPress={() => {
-                                setExpandedSizes(prev =>
-                                  prev.has(k) ? new Set() : new Set([k])
-                                )
-                                setSelectedOption(null)
-                              }}
-                              activeOpacity={0.75}
-                            >
-                              <Text style={[styles.sizeChipLabel, isActive && styles.sizeChipLabelActive]}>
-                                {size.size_label || size.variant_type}
+                            <View key={size.key} style={styles.storeCardsSection}>
+                              <Text style={styles.storeCardsSectionTitle}>
+                                {size.variant_type}{size.size_label ? ` · ${size.size_label}` : ''}
+                                {' — '}{size.store_options.length} store{size.store_options.length !== 1 ? 's' : ''}
                               </Text>
-                              <Text style={[styles.sizeChipPrice, isActive && styles.sizeChipPriceActive]}>
-                                from ${size.best_price.toFixed(2)}
-                              </Text>
-                            </TouchableOpacity>
+
+                              <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                keyboardShouldPersistTaps="always"
+                                contentContainerStyle={styles.storeCardsScroll}
+                              >
+                                {size.store_options.map(opt => {
+                                  const isSelected =
+                                    selectedOption?.store_id === opt.store_id &&
+                                    selectedOption?.product_id === opt.product_id
+                                  return (
+                                    <TouchableOpacity
+                                      key={opt.store_id + opt.product_id}
+                                      style={[
+                                        styles.storeCard,
+                                        opt.is_best && styles.storeCardBest,
+                                        isSelected && styles.storeCardSelected,
+                                      ]}
+                                      onPress={() => setSelectedOption(isSelected ? null : opt)}
+                                      activeOpacity={0.8}
+                                    >
+                                      {/* Image / placeholder */}
+                                      <View style={styles.cardImgBox}>
+                                        {opt.image_url ? (
+                                          <Image
+                                            source={{ uri: opt.image_url }}
+                                            style={styles.cardImg}
+                                            resizeMode="contain"
+                                          />
+                                        ) : (
+                                          <View style={[
+                                            styles.cardImgPlaceholder,
+                                            { backgroundColor: getStoreColor(opt.store_chain) + '18' },
+                                          ]}>
+                                            <View style={[
+                                              styles.cardImgCircle,
+                                              { backgroundColor: getStoreColor(opt.store_chain) },
+                                            ]}>
+                                              <Text style={styles.cardImgLetter}>
+                                                {(opt.store_brand_name || opt.brand || opt.product_name)
+                                                  .charAt(0).toUpperCase()}
+                                              </Text>
+                                            </View>
+                                          </View>
+                                        )}
+                                        {opt.is_best && (
+                                          <View style={styles.bestBadge}>
+                                            <Text style={styles.bestBadgeText}>BEST</Text>
+                                          </View>
+                                        )}
+                                      </View>
+
+                                      {/* Price */}
+                                      <Text style={[
+                                        styles.cardPrice,
+                                        opt.is_best && styles.cardPriceBest,
+                                        isSelected && styles.cardPriceSelected,
+                                      ]}>
+                                        ${opt.effective_price.toFixed(2)}
+                                      </Text>
+
+                                      {/* Brand */}
+                                      <Text style={styles.cardBrand} numberOfLines={1}>
+                                        {opt.store_brand_name || opt.brand || 'Store brand'}
+                                      </Text>
+
+                                      {/* Store chip */}
+                                      <View style={[
+                                        styles.storeChip,
+                                        { backgroundColor: getStoreColor(opt.store_chain) },
+                                      ]}>
+                                        <Text style={styles.storeChipText}>{opt.store_chain}</Text>
+                                      </View>
+
+                                      {/* Loyalty */}
+                                      {opt.has_loyalty && opt.loyalty_price && (
+                                        <Text style={styles.cardLoyalty}>
+                                          w/ {opt.loyalty_name}
+                                        </Text>
+                                      )}
+
+                                      {/* Selected check */}
+                                      {isSelected && (
+                                        <View style={styles.selectedCheck}>
+                                          <Text style={styles.selectedCheckText}>✓</Text>
+                                        </View>
+                                      )}
+                                    </TouchableOpacity>
+                                  )
+                                })}
+                              </ScrollView>
+
+                              {/* Add to list row */}
+                              <View style={styles.addToListRow}>
+                                {addedConfirm ? (
+                                  <View style={styles.addedConfirmRow}>
+                                    <Text style={styles.addedConfirmText}>{addedConfirm}</Text>
+                                  </View>
+                                ) : selectedOption ? (
+                                  <TouchableOpacity
+                                    style={styles.addToListBtn}
+                                    onPress={() => {
+                                      const msg = `✓ ${selectedOption.store_chain} $${selectedOption.effective_price.toFixed(2)} added!`
+                                      addProductToListById(selectedOption.product_id, 1, undefined)
+                                      setRecentlyAddedId(selectedOption.product_id)
+                                      setSelectedOption(null)
+                                      setAddedConfirm(msg)
+                                      setTimeout(() => {
+                                        setRecentlyAddedId(null)
+                                        setAddedConfirm(null)
+                                      }, 2000)
+                                    }}
+                                  >
+                                    <Text style={styles.addToListBtnText}>
+                                      + Add {selectedOption.store_chain} ${selectedOption.effective_price.toFixed(2)} to list
+                                    </Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <Text style={styles.addToListHint}>
+                                    Tap a card to select, then add to list
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
                           )
                         })}
-                      </ScrollView>
-
-                      {/* Store cards for the selected size */}
-                      {group.sizes.map(size => {
-                        const k = group.concept + '||' + size.key
-                        if (!expandedSizes.has(k)) return null
-                        return (
-                          <View key={size.key} style={styles.storeCardsSection}>
-
-                            {/* Selected size label */}
-                            <Text style={styles.storeCardsSectionTitle}>
-                              {size.variant_type}{size.size_label ? ` · ${size.size_label}` : ''} — {size.store_options.length} store{size.store_options.length !== 1 ? 's' : ''}
-                            </Text>
-
-                            <ScrollView
-                              horizontal
-                              showsHorizontalScrollIndicator={false}
-                              keyboardShouldPersistTaps="always"
-                              contentContainerStyle={styles.storeCardsScroll}
-                            >
-                              {size.store_options.map(opt => (
-                                <TouchableOpacity
-                                  key={opt.store_id + opt.product_id}
-                                  style={[
-                                    styles.storeCard,
-                                    opt.is_best && styles.storeCardBest,
-                                    selectedOption?.store_id === opt.store_id &&
-                                    selectedOption?.product_id === opt.product_id &&
-                                      styles.storeCardSelected,
-                                  ]}
-                                  onPress={() => {
-                                    setSelectedOption(
-                                      selectedOption?.store_id === opt.store_id &&
-                                      selectedOption?.product_id === opt.product_id
-                                        ? null : opt
-                                    )
-                                  }}
-                                  activeOpacity={0.8}
-                                >
-                                  {/* Product image */}
-                                  <View style={styles.cardImgBox}>
-                                    {opt.image_url ? (
-                                      <Image
-                                        source={{ uri: opt.image_url }}
-                                        style={styles.cardImg}
-                                        resizeMode="contain"
-                                      />
-                                    ) : (
-                                      <View style={[
-                                        styles.cardImgPlaceholder,
-                                        { backgroundColor: getStoreColor(opt.store_chain) + '15' },
-                                      ]}>
-                                        <View style={[
-                                          styles.cardImgCircle,
-                                          { backgroundColor: getStoreColor(opt.store_chain) },
-                                        ]}>
-                                          <Text style={styles.cardImgLetter}>
-                                            {(opt.store_brand_name || opt.brand || opt.product_name)
-                                              .charAt(0).toUpperCase()}
-                                          </Text>
-                                        </View>
-                                      </View>
-                                    )}
-                                    {opt.is_best && (
-                                      <View style={styles.bestBadge}>
-                                        <Text style={styles.bestBadgeText}>BEST</Text>
-                                      </View>
-                                    )}
-                                  </View>
-
-                                  {/* Price */}
-                                  <Text style={[styles.cardPrice, opt.is_best && styles.cardPriceBest]}>
-                                    ${opt.effective_price.toFixed(2)}
-                                  </Text>
-
-                                  {/* Brand */}
-                                  <Text style={styles.cardBrand} numberOfLines={1}>
-                                    {opt.store_brand_name || opt.brand || 'Store brand'}
-                                  </Text>
-
-                                  {/* Store chip */}
-                                  <View style={[styles.storeChip, { backgroundColor: getStoreColor(opt.store_chain) }]}>
-                                    <Text style={styles.storeChipText}>{opt.store_chain}</Text>
-                                  </View>
-
-                                  {/* Loyalty note */}
-                                  {opt.has_loyalty && opt.loyalty_price && (
-                                    <Text style={styles.cardLoyalty}>w/ {opt.loyalty_name}</Text>
-                                  )}
-
-                                  {/* Selected indicator */}
-                                  {selectedOption?.store_id === opt.store_id &&
-                                   selectedOption?.product_id === opt.product_id && (
-                                    <View style={styles.selectedCheck}>
-                                      <Text style={styles.selectedCheckText}>✓</Text>
-                                    </View>
-                                  )}
-                                </TouchableOpacity>
-                              ))}
-                            </ScrollView>
-
-                            {/* Add to list row */}
-                            <View style={styles.addToListRow}>
-                              {addedConfirm ? (
-                                <View style={styles.addedConfirmRow}>
-                                  <Text style={styles.addedConfirmText}>{addedConfirm}</Text>
-                                </View>
-                              ) : selectedOption ? (
-                                <TouchableOpacity
-                                  style={styles.addToListBtn}
-                                  onPress={() => {
-                                    const msg = `✓ ${selectedOption.store_chain} $${selectedOption.effective_price.toFixed(2)} added!`
-                                    addProductToListById(selectedOption.product_id, 1, undefined)
-                                    setRecentlyAddedId(selectedOption.product_id)
-                                    setSelectedOption(null)
-                                    setAddedConfirm(msg)
-                                    setTimeout(() => {
-                                      setRecentlyAddedId(null)
-                                      setAddedConfirm(null)
-                                    }, 2000)
-                                  }}
-                                >
-                                  <Text style={styles.addToListBtnText}>
-                                    + Add {selectedOption.store_chain} ${selectedOption.effective_price.toFixed(2)} to list
-                                  </Text>
-                                </TouchableOpacity>
-                              ) : (
-                                <Text style={styles.addToListHint}>
-                                  Tap a card to select, then add
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                        )
-                      })}
-                    </View>
-                  )}
-                </View>
-              )})
+                      </View>
+                    )}
+                  </View>
+                )
+              })
             )}
 
-            {/* NO RESULTS */}
+            {/* No results */}
             {!searching &&
              searchResults.length === 0 &&
              inputText.trim().length >= 2 &&
              !showingMiniForm && (
               <View style={styles.noResultsWrap}>
-                <Svg width={40} height={40} viewBox="0 0 24 24"
-                  fill="none" stroke={colors.textTertiary}
-                  strokeWidth={1.5} strokeLinecap="round">
-                  <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-                  <Line x1="3" y1="6" x2="21" y2="6" />
-                  <Path d="M16 10a4 4 0 01-8 0" />
-                </Svg>
-                <Text style={styles.noResultsTitle}>Still adding products</Text>
+                <View style={styles.noResultsIconWrap}>
+                  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
+                    stroke={colors.primary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+                    <Line x1="7" y1="7" x2="7.01" y2="7" strokeWidth={2.5} />
+                  </Svg>
+                </View>
+                <Text style={styles.noResultsTitle}>"{inputText.trim()}"</Text>
                 <Text style={styles.noResultsSub}>
-                  We add new products every week.{'\n'}
-                  You can still add this to your list!
+                  We're not tracking prices for this item yet.{'\n'}You can still add it to your list.
                 </Text>
                 <TouchableOpacity
                   style={styles.addCustomTrigger}
@@ -858,114 +887,91 @@ export default function ListScreen() {
                     setShowingMiniForm(true)
                   }}
                 >
-                  <Text style={styles.addCustomTriggerText}>
-                    + Add "{inputText.trim()}" to list
-                  </Text>
+                  <Text style={styles.addCustomTriggerText}>Add to my list</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* MINI FORM */}
+            {/* Mini form */}
             {showingMiniForm && (
               <View style={styles.miniFormWrap}>
-                <Text style={styles.miniFormTitle}>
-                  "{inputText.trim()}"
-                </Text>
-
-                {/* Quantity */}
-                <View style={styles.miniRow}>
-                  <Text style={styles.miniLabel}>QTY</Text>
-                  <View style={styles.miniQtyRow}>
-                    <TouchableOpacity
-                      style={styles.miniQtyBtn}
-                      onPress={() => setMiniFormQty(Math.max(1, miniFormQty - 1))}
-                    >
-                      <Text style={styles.miniQtyBtnText}>−</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.miniQtyNum}>{miniFormQty}</Text>
-                    <TouchableOpacity
-                      style={styles.miniQtyBtn}
-                      onPress={() => setMiniFormQty(miniFormQty + 1)}
-                    >
-                      <Text style={styles.miniQtyBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
+                {/* Item name pill */}
+                <View style={styles.miniItemPill}>
+                  <View style={styles.miniItemPillDot} />
+                  <Text style={styles.miniItemPillText} numberOfLines={1}>
+                    {inputText.trim()}
+                  </Text>
                 </View>
 
-                {/* Unit chips */}
-                <Text style={styles.miniLabel}>UNIT</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyboardShouldPersistTaps="always"
-                  style={{ marginTop: 6 }}
-                  contentContainerStyle={{
-                    paddingHorizontal: 16,
-                    gap: 6,
-                    flexDirection: 'row',
-                  }}
-                >
-                  {UNIT_OPTIONS.map(u => (
-                    <TouchableOpacity
-                      key={u}
-                      style={[styles.unitChip, miniFormUnit === u && styles.unitChipActive]}
-                      onPress={() => setMiniFormUnit(u)}
-                    >
-                      <Text style={[
-                        styles.unitChipText,
-                        miniFormUnit === u && styles.unitChipTextActive,
-                      ]}>
-                        {u}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                {/* Qty + Unit card */}
+                <View style={styles.miniCard}>
+                  {/* Qty row */}
+                  <View style={styles.miniCardRow}>
+                    <Text style={styles.miniCardLabel}>Quantity</Text>
+                    <View style={styles.miniQtyStepper}>
+                      <TouchableOpacity
+                        style={styles.miniStepBtn}
+                        onPress={() => setMiniFormQty(Math.max(1, miniFormQty - 1))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.miniStepBtnText}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.miniStepNum}>{miniFormQty}</Text>
+                      <TouchableOpacity
+                        style={styles.miniStepBtn}
+                        onPress={() => setMiniFormQty(miniFormQty + 1)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.miniStepBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-                {/* Note */}
-                <TextInput
-                  style={styles.miniNote}
-                  placeholder="Note (optional)"
-                  placeholderTextColor={colors.textTertiary}
-                  value={miniFormNote}
-                  onChangeText={setMiniFormNote}
-                  returnKeyType="done"
-                />
+                  <View style={styles.miniCardDivider} />
 
-                {/* Actions */}
-                <View style={styles.miniActions}>
-                  <TouchableOpacity
-                    style={styles.miniCancel}
-                    onPress={() => {
-                      setIsInMiniForm(false)
-                      setShowingMiniForm(false)
-                    }}
+                  {/* Unit chips */}
+                  <View style={styles.miniCardRow}>
+                    <Text style={styles.miniCardLabel}>Unit</Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="always"
+                    contentContainerStyle={styles.unitChipsScroll}
                   >
-                    <Text style={styles.miniCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.miniAdd}
-                    onPress={() => {
-                      addCustomItemFull(
-                        inputText.trim(),
-                        miniFormQty,
-                        miniFormUnit,
-                        miniFormNote.trim() || undefined
-                      )
-                      setIsInMiniForm(false)
-                      setShowingMiniForm(false)
-                      setInputText('')
-                      setSearchResults([])
-                      Keyboard.dismiss()
-                    }}
-                  >
-                    <Text style={styles.miniAddText}>Add to List</Text>
-                  </TouchableOpacity>
+                    {UNIT_OPTIONS.map(u => (
+                      <TouchableOpacity
+                        key={u}
+                        style={[styles.unitChip, miniFormUnit === u && styles.unitChipActive]}
+                        onPress={() => setMiniFormUnit(u)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.unitChipText, miniFormUnit === u && styles.unitChipTextActive]}>
+                          {u}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Note input card */}
+                <View style={styles.miniNoteCard}>
+                  <Text style={styles.miniCardLabel}>Note</Text>
+                  <TextInput
+                    style={styles.miniNote}
+                    placeholder="e.g. organic, low-fat, family size…"
+                    placeholderTextColor={colors.textTertiary}
+                    value={miniFormNote}
+                    onChangeText={setMiniFormNote}
+                    returnKeyType="done"
+                  />
                 </View>
               </View>
             )}
 
-            {/* MANUAL ADD HINT at bottom */}
+            {/* Manual add hint — only shown when there ARE results */}
             {!searching &&
+             searchResults.length > 0 &&
              inputText.trim().length >= 2 &&
              !showingMiniForm && (
               <TouchableOpacity
@@ -977,16 +983,42 @@ export default function ListScreen() {
                 }}
               >
                 <Text style={styles.manualHintText}>
-                  + Add "{inputText.trim()}" as custom item
+                  + Add "{inputText.trim()}" to my list
                 </Text>
               </TouchableOpacity>
             )}
-
           </ScrollView>
+
+          {/* Pinned Add to List button — only shown in mini form */}
+          {showingMiniForm && (
+            <View style={styles.miniPinnedBtn}>
+              <TouchableOpacity
+                style={styles.miniPinnedBtnInner}
+                onPress={() => {
+                  addCustomItemFull(
+                    inputText.trim(),
+                    miniFormQty,
+                    miniFormUnit,
+                    miniFormNote.trim() || undefined
+                  )
+                  setIsInMiniForm(false)
+                  setShowingMiniForm(false)
+                  setInputText('')
+                  setSearchResults([])
+                  Keyboard.dismiss()
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.miniPinnedBtnText}>
+                  Add {miniFormQty > 1 ? `${miniFormQty}× ` : ''}"{inputText.trim()}" to my list
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
-      {/* ── Bottom input bar ── */}
+      {/* ── BOTTOM INPUT BAR ── */}
       <View style={[styles.bottomBar, { marginBottom: keyboardHeight }]}>
         <View style={styles.inputRow}>
           <View style={styles.inputWrapper}>
@@ -1006,9 +1038,7 @@ export default function ListScreen() {
                   setTimeout(() => {
                     if (!isInMiniForm) {
                       setIsInputFocused(false)
-                      if (inputText.trim().length === 0) {
-                        setSearchResults([])
-                      }
+                      if (inputText.trim().length === 0) setSearchResults([])
                     }
                   }, 200)
                 }}
@@ -1025,23 +1055,28 @@ export default function ListScreen() {
           </View>
           {isInputFocused && (
             <TouchableOpacity
-              style={styles.doneBtn}
+              style={styles.backBtn}
               onPress={() => {
                 Keyboard.dismiss()
                 setIsInputFocused(false)
                 setIsInMiniForm(false)
+                setSelectedOption(null)
                 setInputText('')
                 setSearchResults([])
                 setShowingMiniForm(false)
               }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.doneBtnText}>Done</Text>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+                stroke={colors.textSecondary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 19V5M5 12l7 7 7-7" />
+              </Svg>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ── Budget modal ── */}
+      {/* ── BUDGET MODAL ── */}
       <Modal
         visible={budgetModalVisible}
         animationType="slide"
@@ -1084,7 +1119,7 @@ export default function ListScreen() {
                   value={budgetInput}
                   onChangeText={text => setBudgetInput(text.replace(/[^0-9.]/g, ''))}
                   placeholder="0"
-                  placeholderTextColor="#C0CCC0"
+                  placeholderTextColor={colors.textTertiary}
                   keyboardType="decimal-pad"
                   autoFocus
                   selectTextOnFocus
@@ -1137,182 +1172,150 @@ export default function ListScreen() {
         </SafeAreaView>
       </Modal>
 
-    </SafeAreaView>
+    </View>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: colors.background,
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  headerSub: {
-    fontSize: 13,
-    color: colors.textTertiary,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  clearBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-  },
-  clearBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-
-  // Budget card
-  budgetCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    shadowColor: colors.textPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  budgetStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  budgetStatLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  budgetStatValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginTop: 3,
-    letterSpacing: -0.3,
-  },
-  budgetOver: {
-    color: '#F44336',
-  },
-  budgetDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: colors.border,
-  },
-  progressTrack: {
-    height: 4,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 2,
-    marginTop: 12,
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  hero: {
     overflow: 'hidden',
   },
-  progressFill: {
+  heroSkeleton: {
+    paddingBottom: 24,
+  },
+  heroCircle1: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    top: -60,
+    right: -40,
+  },
+  heroCircle2: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    bottom: -20,
+    left: -30,
+  },
+  heroInner: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  heroLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  heroClearBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    marginTop: 4,
+  },
+  heroClearText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  heroStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  heroStatValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  heroStatValueMuted: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  heroStatLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 2,
+  },
+  heroBudgetBar: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  heroBudgetFill: {
     height: 4,
     borderRadius: 2,
   },
-  budgetBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  budgetRemainingText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    fontWeight: '500',
-  },
-  budgetEditLink: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  budgetEmpty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  budgetEmptyLeft: {
+
+  // ── White sheet ───────────────────────────────────────────────────────────
+  sheetContainer: {
     flex: 1,
-  },
-  budgetEmptyLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  budgetEmptyHint: {
-    fontSize: 13,
-    color: colors.textTertiary,
-    marginTop: 3,
-  },
-  budgetSetBtn: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1.5,
-    borderColor: colors.primaryBorder,
-  },
-  budgetSetBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
+    overflow: 'hidden',
   },
 
-  // List
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingTop: 8,
-  },
-
-  // Completion banner
+  // ── Completion banner ─────────────────────────────────────────────────────
   completionBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.primaryLight,
     marginHorizontal: 16,
-    marginBottom: 8,
-    marginTop: 8,
+    marginTop: 16,
+    marginBottom: 4,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: colors.primaryBorder,
+    borderColor: '#BBF7D0',
   },
   completionLeft: {
     flexDirection: 'row',
@@ -1330,7 +1333,7 @@ const styles = StyleSheet.create({
   },
   completionCheckText: {
     fontSize: 18,
-    color: colors.textInverse,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   completionTitle: {
@@ -1340,19 +1343,27 @@ const styles = StyleSheet.create({
   },
   completionSub: {
     fontSize: 12,
-    color: '#6B7B7A',
+    color: colors.textSecondary,
     marginTop: 1,
   },
   completionBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   completionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textInverse,
+    color: '#FFFFFF',
+  },
+
+  // ── List ──────────────────────────────────────────────────────────────────
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingTop: 8,
   },
 
   // Section headers
@@ -1360,14 +1371,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 6,
     gap: 8,
   },
-  sectionBar: {
-    width: 3,
-    height: 14,
-    borderRadius: 2,
+  sectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   sectionTitle: {
     fontSize: 11,
@@ -1379,6 +1390,7 @@ const styles = StyleSheet.create({
   sectionCount: {
     fontSize: 11,
     color: colors.textTertiary,
+    fontWeight: '500',
   },
 
   // Item cards
@@ -1390,24 +1402,35 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.textPrimary,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 1,
+    overflow: 'hidden',
+  },
+  itemAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D0DAD0',
+    borderColor: colors.border,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    marginLeft: 8,
   },
   checkboxChecked: {
     backgroundColor: colors.primary,
@@ -1415,7 +1438,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 13,
-    color: colors.textInverse,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   itemContent: {
@@ -1428,7 +1451,7 @@ const styles = StyleSheet.create({
   },
   itemNameChecked: {
     textDecorationLine: 'line-through',
-    color: '#A0B0A0',
+    color: colors.textTertiary,
   },
   itemSub: {
     fontSize: 12,
@@ -1476,6 +1499,8 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontWeight: '500',
   },
+
+  // Delete row
   deleteRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
@@ -1485,7 +1510,7 @@ const styles = StyleSheet.create({
   },
   deleteConfirmBtn: {
     flex: 1,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -1495,7 +1520,7 @@ const styles = StyleSheet.create({
   deleteConfirmText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#EF4444',
+    color: colors.red,
   },
   deleteCancelBtn: {
     paddingHorizontal: 16,
@@ -1509,7 +1534,7 @@ const styles = StyleSheet.create({
   deleteCancelText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7B7A',
+    color: colors.textSecondary,
   },
 
   // Empty state
@@ -1518,9 +1543,17 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 40,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
+  },
+  emptyIcon: {
+    fontSize: 32,
   },
   emptyTitle: {
     fontSize: 20,
@@ -1537,7 +1570,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Loading skeletons
+  // Skeleton
   skeletonCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1594,7 +1627,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ── Search results panel ──────────────────────────────────────────────────
+  // ── Search results panel ───────────────────────────────────────────────────
   resultsPanel: {
     position: 'absolute',
     left: 0,
@@ -1602,56 +1635,55 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: colors.textPrimary,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 16,
   },
   resultsDragHandle: {
     width: 36,
     height: 4,
-    backgroundColor: colors.borderStrong,
+    backgroundColor: colors.border,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 10,
     marginBottom: 2,
   },
 
-  // Concept header
+  // ── Concept header ─────────────────────────────────────────────────────────
   conceptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 13,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.border,
-    gap: 10,
+    gap: 12,
   },
   conceptHeaderOpen: {
-    borderLeftColor: colors.primary,
     backgroundColor: colors.primaryLight,
+    borderBottomColor: '#BBF7D0',
   },
   conceptIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryLight,
+  },
+  conceptIconBadgeOpen: {
+    backgroundColor: colors.primary,
   },
   conceptIconLetter: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.primary,
+    color: colors.textTertiary,
   },
-  conceptAccentBar: {
-    width: 4,
-    height: 26,
-    borderRadius: 3,
+  conceptIconLetterOpen: {
+    color: '#FFFFFF',
   },
   conceptHeaderContent: {
     flex: 1,
@@ -1661,23 +1693,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.1,
+  },
+  conceptTitleOpen: {
+    color: colors.primaryDark,
   },
   conceptSubline: {
     fontSize: 12,
     color: colors.textTertiary,
     fontWeight: '400',
   },
-  conceptMeta: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
   conceptChevron: {
     fontSize: 13,
     color: colors.textTertiary,
   },
+  conceptChevronOpen: {
+    color: colors.primary,
+  },
+  conceptBody: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
 
-  // Size chips (horizontal row)
+  // Size chips
   sizeChipsScroll: {
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -1687,15 +1725,15 @@ const styles = StyleSheet.create({
   sizeChip: {
     borderRadius: 22,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     alignItems: 'center',
-    minWidth: 90,
-    shadowColor: colors.textPrimary,
+    minWidth: 88,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
   },
@@ -1703,104 +1741,86 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
   },
   sizeChipLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   sizeChipLabelActive: {
-    color: colors.textInverse,
+    color: '#FFFFFF',
   },
   sizeChipPrice: {
     fontSize: 11,
     color: colors.textTertiary,
     marginTop: 2,
-    fontWeight: '500',
   },
   sizeChipPriceActive: {
     color: 'rgba(255,255,255,0.75)',
   },
 
-  // Store cards section (below chips)
+  // Store cards section
   storeCardsSection: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surfaceTertiary,
+    paddingBottom: 8,
   },
   storeCardsSectionTitle: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.textTertiary,
+    letterSpacing: 0.5,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 2,
+    paddingTop: 4,
+    paddingBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
   },
-
-  // Keep legacy aliases for safety
-  sizeHeader: { flexDirection: 'row', alignItems: 'center' },
-  sizeHeaderContent: { flex: 1 },
-  sizeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
-  sizeLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  sizeMeta: { fontSize: 11, color: colors.textTertiary },
-  sizeBestPrice: { fontSize: 11, color: colors.textTertiary },
-  sizeChevron: { fontSize: 11, color: colors.textTertiary },
-
-  // Horizontal card scroll
   storeCardsScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 4,
     gap: 10,
     flexDirection: 'row',
   },
-
-  // Individual store card
   storeCard: {
-    width: 108,
-    borderRadius: 12,
+    width: 112,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1.5,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-    shadowColor: colors.textPrimary,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   storeCardBest: {
     borderColor: colors.primary,
     borderWidth: 2,
     backgroundColor: '#F0FDF4',
     shadowColor: colors.primary,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   storeCardSelected: {
-    borderColor: '#2563EB',
+    borderColor: colors.blue,
     borderWidth: 2.5,
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.25,
+    shadowColor: colors.blue,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
   },
-
-  // Card image area
   cardImgBox: {
-    height: 76,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: '100%',
+    height: 60,
+    marginBottom: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
     position: 'relative',
   },
   cardImg: {
-    width: 60,
-    height: 60,
+    width: '100%',
+    height: '100%',
   },
   cardImgPlaceholder: {
     width: '100%',
@@ -1809,80 +1829,77 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardImgCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardImgLetter: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.textInverse,
+    color: '#FFFFFF',
   },
   bestBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 0,
+    left: 0,
     backgroundColor: colors.primary,
-    borderRadius: 4,
+    borderRadius: 0,
+    borderBottomRightRadius: 6,
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
   bestBadgeText: {
     fontSize: 8,
     fontWeight: '800',
-    color: colors.textInverse,
-    letterSpacing: 0.3,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-
-  // Card body
   cardPrice: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.4,
-    paddingHorizontal: 8,
-    marginTop: 8,
+    letterSpacing: -0.3,
   },
   cardPriceBest: {
     color: colors.primary,
   },
+  cardPriceSelected: {
+    color: colors.blue,
+  },
   cardBrand: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
-    paddingHorizontal: 8,
-    marginTop: 2,
-  },
-  storeChip: {
-    marginHorizontal: 8,
-    marginTop: 6,
-    marginBottom: 8,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  storeChipText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textInverse,
-    textAlign: 'center',
-  },
-  cardLoyalty: {
-    fontSize: 9,
-    color: colors.warning,
-    paddingHorizontal: 8,
     marginTop: 2,
     marginBottom: 6,
   },
+  storeChip: {
+    borderRadius: 20,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  storeChipText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  cardLoyalty: {
+    fontSize: 9,
+    color: colors.orange,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   selectedCheck: {
     position: 'absolute',
-    top: 4,
-    left: 4,
+    top: 8,
+    right: 8,
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.blue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1894,242 +1911,297 @@ const styles = StyleSheet.create({
 
   // Add to list row
   addToListRow: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-    alignItems: 'center',
-  },
-  addToListBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  addToListBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textInverse,
-  },
-  addToListHint: {
-    fontSize: 11,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    paddingVertical: 8,
   },
   addedConfirmRow: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.primaryLight,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.primaryBorder,
-    paddingVertical: 11,
-    paddingHorizontal: 16,
-    width: '100%',
+    paddingVertical: 10,
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
   },
   addedConfirmText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryDark,
+  },
+  addToListBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addToListBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  addToListHint: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    paddingVertical: 4,
   },
 
   // No results
   noResultsWrap: {
-    padding: 24,
     alignItems: 'center',
-    gap: 6,
+    paddingTop: 32,
+    paddingBottom: 20,
+    paddingHorizontal: 24,
+  },
+  noResultsIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
   },
   noResultsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: colors.textPrimary,
-    marginTop: 8,
+    marginBottom: 8,
+    letterSpacing: -0.3,
+    textAlign: 'center',
   },
   noResultsSub: {
     fontSize: 13,
     color: colors.textTertiary,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+    marginBottom: 20,
   },
   addCustomTrigger: {
-    marginTop: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.primaryBorder,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   addCustomTriggerText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
   },
 
   // Mini form
   miniFormWrap: {
-    padding: 16,
-    gap: 10,
-    borderTopWidth: 0.5,
-    borderTopColor: colors.surfaceSecondary,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: colors.background,
   },
-  miniFormTitle: {
+  miniItemPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  miniItemPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    flexShrink: 0,
+  },
+  miniItemPillText: {
     fontSize: 15,
     fontWeight: '700',
+    color: colors.primaryDark,
+    flex: 1,
+  },
+  miniCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  miniCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  miniCardLabel: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
-  miniRow: {
+  miniCardDivider: {
+    height: 1,
+    backgroundColor: colors.surfaceSecondary,
+    marginHorizontal: 16,
+  },
+  miniQtyStepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: colors.background,
+    borderRadius: 22,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    gap: 0,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  miniLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  miniQtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  miniQtyBtn: {
+  miniStepBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.surfaceSecondary,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  miniQtyBtnText: {
-    fontSize: 20,
+  miniStepBtnText: {
+    fontSize: 18,
     color: colors.primary,
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  miniQtyNum: {
-    fontSize: 16,
     fontWeight: '700',
+    lineHeight: 22,
+  },
+  miniStepNum: {
+    fontSize: 17,
+    fontWeight: '800',
     color: colors.textPrimary,
-    minWidth: 34,
+    minWidth: 36,
     textAlign: 'center',
   },
+  unitChipsScroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 4,
+    gap: 8,
+    flexDirection: 'row',
+  },
   unitChip: {
-    paddingHorizontal: 12,
-    height: 30,
-    borderRadius: 15,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   unitChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   unitChipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   unitChipTextActive: {
-    color: colors.textInverse,
+    color: '#FFFFFF',
+  },
+  miniNoteCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 13,
+    paddingBottom: 6,
+    marginBottom: 10,
   },
   miniNote: {
-    height: 42,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    height: 40,
     fontSize: 14,
     color: colors.textPrimary,
-    marginTop: 4,
+    paddingHorizontal: 0,
+    marginTop: 6,
   },
-  miniActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+
+  // Pinned add button
+  miniPinnedBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  miniCancel: {
-    flex: 1,
-    height: 42,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  miniCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  miniAdd: {
-    flex: 2,
-    height: 42,
+  miniPinnedBtnInner: {
     backgroundColor: colors.primary,
-    borderRadius: 10,
+    borderRadius: 14,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  miniAddText: {
-    fontSize: 14,
+  miniPinnedBtnText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.textInverse,
+    color: '#FFFFFF',
   },
 
   // Manual hint
   manualHint: {
-    padding: 12,
+    marginHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
     alignItems: 'center',
-    borderTopWidth: 0.5,
-    borderTopColor: colors.surfaceSecondary,
   },
   manualHintText: {
     fontSize: 13,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 
-  // Skeleton in search panel
-  skeletonWrap: { padding: 12, gap: 8 },
+  // Skeleton rows (search panel)
+  skeletonWrap: {
+    padding: 16,
+    gap: 10,
+  },
   skeletonRow: {
-    height: 50,
+    height: 52,
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 10,
   },
 
-  // Bottom bar
+  // ── Bottom input bar ───────────────────────────────────────────────────────
   bottomBar: {
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: colors.textPrimary,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   inputRow: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   inputWrapper: {
     flex: 1,
@@ -2137,31 +2209,30 @@ const styles = StyleSheet.create({
   inputInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
     backgroundColor: colors.background,
-    borderRadius: 23,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 48,
     gap: 8,
   },
   input: {
     flex: 1,
     fontSize: 15,
     color: colors.textPrimary,
-    height: 46,
+    height: 48,
   },
-  doneBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-  },
-  doneBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textInverse,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // Budget modal
+  // ── Budget modal ───────────────────────────────────────────────────────────
   modalContainer: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -2170,52 +2241,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  modalCancelBtn: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    minWidth: 60,
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: colors.textTertiary,
-    fontWeight: '500',
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.2,
+  },
+  modalCancelBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    minWidth: 60,
+  },
+  modalCancelText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   modalSaveBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 7,
+    borderRadius: 10,
     minWidth: 60,
     alignItems: 'center',
   },
   modalSaveBtnDisabled: {
-    opacity: 0.45,
+    opacity: 0.4,
   },
   modalSaveText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: colors.textInverse,
+    color: '#FFFFFF',
   },
   modalScroll: {
     flex: 1,
   },
   modalScrollContent: {
-    paddingBottom: 40,
+    padding: 24,
+    gap: 24,
   },
   modalAmountSection: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
     alignItems: 'center',
   },
   modalAmountLabel: {
@@ -2223,54 +2292,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textTertiary,
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   modalAmountRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
+    alignItems: 'center',
   },
   modalDollarSign: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '300',
-    color: colors.primary,
-    lineHeight: 56,
+    color: colors.textTertiary,
+    marginRight: 4,
   },
   modalAmountInput: {
     fontSize: 52,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary,
-    minWidth: 120,
     letterSpacing: -1,
+    minWidth: 120,
+    textAlign: 'center',
   },
   modalAmountUnderline: {
+    width: 160,
     height: 2,
-    width: 180,
-    backgroundColor: colors.border,
+    backgroundColor: colors.primary,
+    borderRadius: 1,
     marginTop: 8,
   },
-  modalPresetsSection: {
-    paddingHorizontal: 24,
-    marginTop: 32,
-  },
+  modalPresetsSection: {},
   modalPresetsLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.textTertiary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 1.2,
     marginBottom: 12,
   },
   modalPresetsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   presetChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -2285,14 +2350,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   presetChipTextSelected: {
-    color: colors.textInverse,
+    color: '#FFFFFF',
   },
   modalSummaryCard: {
-    marginHorizontal: 24,
-    marginTop: 32,
     backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -2300,18 +2363,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: colors.textTertiary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 16,
-    textAlign: 'center',
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
   modalSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
   },
   modalSummaryStat: {
+    flex: 1,
     alignItems: 'center',
   },
   modalSummaryValue: {
@@ -2327,7 +2387,7 @@ const styles = StyleSheet.create({
   },
   modalSummaryDivider: {
     width: 1,
-    height: 40,
+    height: 36,
     backgroundColor: colors.border,
   },
 })

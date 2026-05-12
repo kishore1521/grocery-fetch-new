@@ -36,7 +36,7 @@ Supabase project: [PASTE YOUR SUPABASE PROJECT URL HERE]
 | Mobile           | Expo React Native               | Managed workflow                   |
 | Language         | TypeScript                      | Strict mode, never use 'any'       |
 | Navigation       | Expo Router (file-based)        | Screens = files in /app folder     |
-| Styling          | NativeWind (Tailwind)           | All styling via className          |
+| Styling          | React Native StyleSheet         | All styling via StyleSheet.create  |
 | State            | Zustand                         | One store per domain               |
 | Auth             | Supabase Auth                   | Email + Google + Guest             |
 | Database         | Supabase Postgres               | All tables listed below            |
@@ -61,6 +61,7 @@ grocery-fetch/
 │   ├── (tabs)/                  ← Bottom tab screens
 │   │   ├── index.tsx            ← Home tab
 │   │   ├── search.tsx           ← Search tab
+│   │   ├── scan.tsx             ← Scan tab stub (routes to /receipt/upload)
 │   │   ├── list.tsx             ← My List tab
 │   │   └── profile.tsx          ← Profile tab
 │   ├── auth/
@@ -132,55 +133,114 @@ It lives ONLY in the Supabase Edge Function environment.
 
 ---
 
-## DESIGN SYSTEM
+## DESIGN SYSTEM — "Mobile-First Consumer Fintech"
 
-### Colors (define in constants/colors.ts)
-```typescript
-export const colors = {
-  primary: '#00A651',       // Primary green — buttons, active states
-  primaryDark: '#007A3D',   // Darker green — pressed states
-  primaryLight: '#E8F5EE',  // Light green — backgrounds, badges
-  dark: '#0F172A',          // Primary text
-  darkSecondary: '#1E293B', // Secondary dark
-  gray600: '#475569',       // Secondary text
-  gray400: '#94A3B8',       // Tertiary text / placeholders
-  gray200: '#E2E8F0',       // Borders
-  gray100: '#F1F5F9',       // Input backgrounds
-  white: '#FFFFFF',
-  background: '#F8FAFC',    // App background
-  orange: '#F97316',        // Loyalty prices, savings alerts
-  orangeLight: '#FFF3ED',   // Orange badge background
-  red: '#EF4444',           // Errors, delete
-  success: '#00C853',       // Best price badges
-  
-  // Store brand colors
-  shoprite: '#CC0000',
-  stopandshop: '#007A3D',
-  target: '#E53935',
-  walmart: '#0071CE',
-  aldi: '#1E3A5F',
-}
+Style reference: Robinhood, Cash App, Instacart.
+Every screen has a two-layer structure:
+1. Full-bleed dark green gradient HERO at the top (SafeAreaView inside it)
+2. White SHEET that slides up with borderTopLeftRadius/borderTopRightRadius 20px,
+   marginTop: -20 to overlap the hero
+
+NEVER use a plain white header bar. ALWAYS use the hero+sheet pattern on every screen.
+
+### Colors — use constants/colors.ts (source of truth)
+```
+Primary green:    #00A651   — buttons, icons, active states
+Primary dark:     #007A3D   — hover, gradient end
+Primary light:    #E8F5EE   — tinted backgrounds, badges
+Hero gradient:    linear-gradient(135deg, #003D20 → #006B35 → #00A651)
+  colors.heroDark  = '#003D20'
+  colors.heroMid   = '#006B35'
+  colors.heroLight = '#00A651'
+
+Orange:           #F97316   — deal badges, loyalty prices
+Orange light:     #FFF3ED
+Red:              #EF4444   — errors, destructive
+Red light:        #FFF5F5
+Blue:             #2563EB   — selected state (e.g. selected store card)
+
+Text primary:     #0F172A
+Text secondary:   #475569
+Text tertiary:    #94A3B8
+Text inverse:     #FFFFFF
+
+Background:       #F8FAFC
+Surface:          #FFFFFF
+Surface secondary:#F1F5F9
+
+Border:           #E2E8F0
+Border strong:    #CBD5E1
 ```
 
-### Typography rules
-- Headings: font-weight 700-800, letter-spacing -0.3px to -0.8px
-- Body: font-weight 400, line-height 1.5
-- Prices: font-weight 700-800, font-variant-numeric tabular-nums
-- Labels: font-weight 500-600, letter-spacing 0.04-0.08em
-- Never use font size below 11px
+### Hero section rules
+- Background: LinearGradient colors={[colors.heroDark, colors.heroMid, colors.heroLight]}
+  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+- Two decorative absolute-positioned circles: rgba(255,255,255,0.04) and rgba(255,255,255,0.03)
+- SafeAreaView edges={['top']} sits INSIDE the gradient
+- heroInner: paddingHorizontal 20, paddingTop 12, paddingBottom 28
+- Hero text: white, bold. Label: 11px uppercase 60% opacity. Title: 28-32px weight 800.
+- Location pill: backgroundColor rgba(255,255,255,0.12), borderRadius 20, white text
+
+### White sheet rules
+- backgroundColor: '#FFFFFF'
+- borderTopLeftRadius: 20, borderTopRightRadius: 20
+- marginTop: -20 (overlaps hero by 20px)
+- overflow: 'hidden'
+- Contains all scrollable content
+
+### Cards
+- borderRadius: 16px standard, 20px for hero/savings cards
+- borderWidth: 1, borderColor: colors.border (no border on most — shadow defines edge)
+- Shadow: shadowColor '#0F172A', shadowOffset {0,1}, shadowOpacity 0.05, shadowRadius 6
+- Left accent stripe on list item cards: 3px wide, height 100%, per-category color
+- Internal dividers: 1px colors.surfaceSecondary (very subtle)
+
+### Buttons
+- Primary: backgroundColor colors.primary, borderRadius 12, height 52, fontWeight 700, white text
+  Shadow: shadowColor colors.primary, shadowOffset {0,4}, shadowOpacity 0.25, shadowRadius 8
+- Secondary/outline: borderWidth 1.5 colors.primary, white bg, green text
+- Destructive: borderColor colors.red, backgroundColor colors.redLight, red text
+- Pill (inline): borderRadius 20, small padding, used for filters/tags/quick actions
+- Ghost on dark (hero): backgroundColor rgba(255,255,255,0.12 or 0.15), borderRadius 20
+
+### Inputs
+- height: 52, borderWidth 1.5, borderColor colors.border, borderRadius 12
+- fontSize 15, placeholderTextColor colors.textTertiary
+- Focus: borderColor colors.primary
+
+### Typography
+- Hero title: 28-32px, fontWeight 800, white, letterSpacing -0.5
+- Section titles: 18-20px, fontWeight 800, colors.textPrimary, letterSpacing -0.3
+- Body: 14-15px, fontWeight 400, colors.textSecondary
+- Labels/caps: 10-12px, fontWeight 700, letterSpacing 1.2, uppercase, colors.textTertiary
+- Prices: fontWeight 800, letterSpacing -0.3
+- Never below 11px
 
 ### Spacing
-- Screen horizontal padding: 20px (px-5 in Tailwind)
-- Card padding: 16px (p-4)
-- Section gaps: 24px (gap-6)
-- Item gaps: 12px (gap-3)
+- Screen horizontal padding: 20px
+- Card padding: 16px
+- Section gap: 24px
+- Item gap: 12px
 
-### Component standards
-- All cards: rounded-2xl (16px), shadow-sm
-- All inputs: rounded-xl (12px), h-13 (52px)
-- All primary buttons: rounded-xl (12px), h-13 (52px), bg-primary
-- Minimum touch target: 44x44px on all interactive elements
-- Press animation: scale-95 on active state (all buttons)
+### Tab bar
+- 5 tabs: Home, Search, Scan (center), List, Profile
+- White background, 1px borderTop colors.border, height 80, paddingBottom 20
+- Active: colors.primary, Inactive: colors.textTertiary
+- Center Scan tab: elevated green circle button (56px, borderRadius 28, marginTop -16)
+  shadowColor colors.primary, shadowOpacity 0.35, elevation 8
+- Tab icons: custom SVG, 22px, strokeWidth 1.8
+- Tab labels: 10px, fontWeight 600
+
+### Icons
+- All icons: custom inline SVG via react-native-svg
+- Never use emoji as icons (emoji OK for decorative/empty states)
+- Icon containers on dark: width/height 36-40, borderRadius 50%, rgba(255,255,255,0.12) bg
+- Icon containers on light: width/height 36, borderRadius 10, colors.primaryLight bg
+
+### Badges
+- Deal/loyalty: backgroundColor colors.orangeLight, color colors.orange, borderRadius 6
+- Best price: backgroundColor colors.primary, white text, borderRadius 0 0 6 0 (top-left corner)
+- Category pill: selected = green bg + white text, unselected = white + gray border
 
 ---
 
@@ -731,10 +791,10 @@ DO NOT BUILD (V2+):
 
 Week: 2 — Grocery List (in progress)
 Active branch: main
-Last completed: Full database — 72 products, 5 stores, 384 prices
-Currently building: Add-item experience rebuild (concept-based search)
+Last completed: Fintech design system applied to all tab screens (hero+sheet pattern)
+Currently building: Week 2 feature completion
 Known issues: None
-Next action: Rebuild add-item UX with grouped product search
+Next action: Continue Week 2 features or start Week 3
 
 ---
 
@@ -762,3 +822,6 @@ Next action: Rebuild add-item UX with grouped product search
 | May 2026 | Replaced dummy stores with 5 real Deer Park stores | ShopRite, Stop&Shop, Aldi, BJs, Costco |
 | May 2026 | Generic product names for store brand items | Bowl&Basket/Kirkland etc tracked in store_brand_name on prices |
 | May 2026 | Replaced KeyboardAvoidingView with react-native-keyboard-controller | KAV is unreliable in complex layouts, keyboard-controller uses native animation hooks |
+| May 2026 | Fintech design system — hero+sheet layout on every screen | Inspired by Robinhood/Cash App/Instacart. Dark green gradient hero, white rounded sheet, #00A651 primary. Applied to all tabs. |
+| May 2026 | Switched from NativeWind to StyleSheet | NativeWind className approach abandoned — all styles now use React Native StyleSheet directly |
+| May 2026 | 5-tab layout: Home, Search, Scan, List, Profile | Center Scan tab is elevated green circle button routing to /receipt/upload |

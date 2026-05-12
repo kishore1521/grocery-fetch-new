@@ -1,59 +1,72 @@
 // constants/colors.ts
-// Grocery Fetch Design System — Direction C
+// Grocery Fetch Design System — Fintech/Consumer Style
 
 export const colors = {
-  // ─── Primary ──────────────────────────────────────
-  primary: '#16A34A',
-  primaryDark: '#15803D',
-  primaryLight: '#F0FDF4',
-  primaryBorder: '#BBF7D0',
+  // ─── Brand greens ──────────────────────────────────
+  primary:        '#00A651',   // buttons, icons, accents
+  primaryDark:    '#007A3D',   // hover, gradient end
+  primaryLight:   '#E8F5EE',   // tinted backgrounds
+  primaryGlow:    'rgba(0,166,81,0.15)', // focus rings
 
-  // ─── Text ─────────────────────────────────────────
-  textPrimary: '#111827',
-  textSecondary: '#4B5563',
-  textTertiary: '#9CA3AF',
-  textInverse: '#FFFFFF',
+  // ─── Hero gradient ─────────────────────────────────
+  heroDark:       '#003D20',
+  heroMid:        '#006B35',
+  heroLight:      '#00A651',
 
-  // ─── Surfaces ─────────────────────────────────────
-  background: '#F9FAFB',
-  surface: '#FFFFFF',
-  surfaceSecondary: '#F3F4F6',
-  surfaceTertiary: '#F8F9FA',
+  // ─── Accent ────────────────────────────────────────
+  orange:         '#F97316',
+  orangeLight:    '#FFF3ED',
+  red:            '#EF4444',
+  redLight:       '#FFF5F5',
+  blue:           '#2563EB',
 
-  // ─── Borders ──────────────────────────────────────
-  border: '#E5E7EB',
-  borderStrong: '#D1D5DB',
+  // ─── Text ──────────────────────────────────────────
+  textPrimary:    '#0F172A',
+  textSecondary:  '#475569',
+  textTertiary:   '#94A3B8',
+  textInverse:    '#FFFFFF',
 
-  // ─── Status ───────────────────────────────────────
-  success: '#16A34A',
-  successLight: '#F0FDF4',
-  warning: '#F59E0B',
-  warningLight: '#FFFBEB',
-  error: '#DC2626',
-  errorLight: '#FEF2F2',
-  savings: '#16A34A',
+  // ─── Surfaces ──────────────────────────────────────
+  background:     '#F8FAFC',
+  surface:        '#FFFFFF',
+  surfaceSecondary: '#F1F5F9',
+  surfaceTertiary:  '#F8FAFC',
 
-  // ─── Store brand colors ───────────────────────────
-  shoprite: '#CC0000',
-  stopAndShop: '#007A3D',
-  target: '#E53935',
-  walmart: '#0071CE',
-  aldi: '#1E3A5F',
-  bjs: '#0047AB',
-  costco: '#005DAA',
+  // ─── Borders ───────────────────────────────────────
+  border:         '#E2E8F0',
+  borderStrong:   '#CBD5E1',
 
-  // ─── Utility ─────────────────────────────────────
-  white: '#FFFFFF',
-  black: '#111827',
-  transparent: 'transparent',
-  overlay: 'rgba(17,24,39,0.5)',
+  // ─── Status ────────────────────────────────────────
+  success:        '#00A651',
+  successLight:   '#E8F5EE',
+  warning:        '#F97316',
+  warningLight:   '#FFF3ED',
+  error:          '#EF4444',
+  errorLight:     '#FFF5F5',
+
+  // ─── Store brand colors ────────────────────────────
+  shoprite:       '#CC0000',
+  stopAndShop:    '#007A3D',
+  target:         '#E53935',
+  walmart:        '#0071CE',
+  aldi:           '#1E3A5F',
+  bjs:            '#0047AB',
+  costco:         '#005DAA',
+
+  // ─── Utility ──────────────────────────────────────
+  white:          '#FFFFFF',
+  black:          '#0F172A',
+  transparent:    'transparent',
+  overlay:        'rgba(15,23,42,0.5)',
 
   // ─── Backward-compat aliases ──────────────────────
-  // Used by auth, profile, store/product stubs, tab layout
-  dark: '#111827',
-  gray400: '#9CA3AF',
-  gray200: '#E5E7EB',
-  brand300: '#9CA3AF',
+  dark:           '#0F172A',
+  gray400:        '#94A3B8',
+  gray200:        '#E2E8F0',
+  brand300:       '#94A3B8',
+
+  // Old Direction C aliases (keep for onboarding/auth stubs)
+  primaryBorder:  '#BBF7D0',
 }
 
 export type ColorKey = keyof typeof colors
