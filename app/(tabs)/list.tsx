@@ -95,6 +95,7 @@ export default function ListScreen() {
     error,
     toggleChecked,
     updateQuantity,
+    updateItem,
     deleteItem,
     clearChecked,
     fetchActiveList,
@@ -123,6 +124,29 @@ export default function ListScreen() {
   const [miniFormQty, setMiniFormQty] = useState(1)
   const [miniFormUnit, setMiniFormUnit] = useState('each')
   const [miniFormNote, setMiniFormNote] = useState('')
+
+  // ── Edit item modal state ─────────────────────────────────────────────────
+  const [editingItem, setEditingItem] = useState<GroceryListItem | null>(null)
+  const [editQty, setEditQty] = useState(1)
+  const [editUnit, setEditUnit] = useState('each')
+  const [editNote, setEditNote] = useState('')
+
+  const openEditModal = (item: GroceryListItem) => {
+    setEditQty(item.quantity)
+    setEditUnit(item.unit ?? 'each')
+    setEditNote(item.notes ?? '')
+    setEditingItem(item)
+  }
+
+  const saveEditModal = async () => {
+    if (!editingItem) return
+    await updateItem(editingItem.id, {
+      quantity: editQty,
+      unit: editUnit || null,
+      notes: editNote.trim() || null,
+    })
+    setEditingItem(null)
+  }
 
   // ── Delete reveal state ───────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -495,7 +519,13 @@ export default function ListScreen() {
               <TouchableOpacity
                 style={styles.itemCard}
                 onLongPress={() => setDeletingId(item.id)}
-                onPress={() => { if (deletingId === item.id) setDeletingId(null) }}
+                onPress={() => {
+                  if (deletingId === item.id) {
+                    setDeletingId(null)
+                  } else {
+                    openEditModal(item)
+                  }
+                }}
                 activeOpacity={0.97}
               >
                 {/* Category accent */}
@@ -882,8 +912,10 @@ export default function ListScreen() {
                 <TouchableOpacity
                   style={styles.addCustomTrigger}
                   onPress={() => {
-                    setIsInMiniForm(true)
+                    setMiniFormQty(1)
                     setMiniFormUnit(getDefaultUnit(inputText.trim()))
+                    setMiniFormNote('')
+                    setIsInMiniForm(true)
                     setShowingMiniForm(true)
                   }}
                 >
@@ -977,8 +1009,10 @@ export default function ListScreen() {
               <TouchableOpacity
                 style={styles.manualHint}
                 onPress={() => {
-                  setIsInMiniForm(true)
+                  setMiniFormQty(1)
                   setMiniFormUnit(getDefaultUnit(inputText.trim()))
+                  setMiniFormNote('')
+                  setIsInMiniForm(true)
                   setShowingMiniForm(true)
                 }}
               >
@@ -1168,6 +1202,107 @@ export default function ListScreen() {
                 </View>
               </View>
             )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── EDIT ITEM MODAL ── */}
+      <Modal
+        visible={editingItem !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setEditingItem(null)}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setEditingItem(null)}
+              style={styles.modalCancelBtn}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Edit Item</Text>
+            <TouchableOpacity
+              onPress={saveEditModal}
+              style={styles.modalSaveBtn}
+            >
+              <Text style={styles.modalSaveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.editModalContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Item name pill */}
+            <View style={styles.miniItemPill}>
+              <View style={styles.miniItemPillDot} />
+              <Text style={styles.miniItemPillText} numberOfLines={1}>
+                {editingItem?.custom_item_name || editingItem?.product?.name || ''}
+              </Text>
+            </View>
+
+            {/* Qty + Unit card */}
+            <View style={styles.miniCard}>
+              <View style={styles.miniCardRow}>
+                <Text style={styles.miniCardLabel}>Quantity</Text>
+                <View style={styles.miniQtyStepper}>
+                  <TouchableOpacity
+                    style={styles.miniStepBtn}
+                    onPress={() => setEditQty(Math.max(1, editQty - 1))}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.miniStepBtnText}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.miniStepNum}>{editQty}</Text>
+                  <TouchableOpacity
+                    style={styles.miniStepBtn}
+                    onPress={() => setEditQty(editQty + 1)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.miniStepBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.miniCardDivider} />
+
+              <View style={styles.miniCardRow}>
+                <Text style={styles.miniCardLabel}>Unit</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+                contentContainerStyle={styles.unitChipsScroll}
+              >
+                {UNIT_OPTIONS.map(u => (
+                  <TouchableOpacity
+                    key={u}
+                    style={[styles.unitChip, editUnit === u && styles.unitChipActive]}
+                    onPress={() => setEditUnit(u)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.unitChipText, editUnit === u && styles.unitChipTextActive]}>
+                      {u}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Note input card */}
+            <View style={styles.miniNoteCard}>
+              <Text style={styles.miniCardLabel}>Note</Text>
+              <TextInput
+                style={styles.miniNote}
+                placeholder="e.g. organic, low-fat, family size…"
+                placeholderTextColor={colors.textTertiary}
+                value={editNote}
+                onChangeText={setEditNote}
+                returnKeyType="done"
+              />
+            </View>
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -2276,6 +2411,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  editModalContent: {
+    padding: 20,
+    gap: 12,
   },
   modalScroll: {
     flex: 1,

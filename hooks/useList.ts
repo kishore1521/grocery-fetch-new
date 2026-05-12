@@ -263,6 +263,24 @@ export function useList() {
     await updateQuantityById(id, quantity)
   }, [updateQuantityById])
 
+  // ─── Update item fields (qty, unit, notes) ───────────────────────────────
+
+  const updateItem = useCallback(async (
+    id: string,
+    fields: { quantity?: number; unit?: string | null; notes?: string | null },
+  ) => {
+    setItems(items.map(i => i.id === id ? { ...i, ...fields } : i))
+    try {
+      const { error } = await supabase
+        .from('grocery_list_items')
+        .update(fields)
+        .eq('id', id)
+      if (error) throw error
+    } catch (e: unknown) {
+      console.error('[useList] updateItem error:', e)
+    }
+  }, [items, setItems])
+
   // ─── Delete item ──────────────────────────────────────────────────────────
 
   const deleteItem = useCallback(async (id: string) => {
@@ -312,6 +330,7 @@ export function useList() {
     // shared
     toggleChecked,
     updateQuantity,
+    updateItem,
     deleteItem,
     clearChecked,
   }
