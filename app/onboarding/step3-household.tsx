@@ -3,13 +3,10 @@ import {
   View,
   Text,
   TouchableOpacity,
-  KeyboardAvoidingView,
   ScrollView,
-  Platform,
   StyleSheet,
   Animated,
   ActivityIndicator,
-  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -117,19 +114,7 @@ export default function Step3Household() {
 
       const { data: { user } } = await supabase.auth.getUser()
 
-      console.log('User:', user?.id)
-      console.log('Saving data:', {
-        user_id: user?.id,
-        zip_code: onboardingData.zipCode,
-        preferred_stores: onboardingData.selectedStores,
-        has_loyalty_shoprite: onboardingData.loyaltyShoprite,
-        has_loyalty_stopandshop: onboardingData.loyaltyStopAndShop,
-        household_size: householdSize,
-        weekly_budget: weeklyBudget,
-        shopping_frequency: shoppingFrequency,
-      })
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: user?.id,
@@ -140,24 +125,14 @@ export default function Step3Household() {
           household_size: householdSize,
           weekly_budget: weeklyBudget,
           shopping_frequency: shoppingFrequency,
-        }, {
-          onConflict: 'user_id',
-        })
-
-      console.log('Supabase response data:', data)
-      console.log('Supabase response error:', error)
+        }, { onConflict: 'user_id' })
 
       if (error) throw error
 
       router.replace('/onboarding/complete')
-    } catch (e: unknown) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      const err = e as Record<string, unknown>
-      console.error('Full error object:', e)
-      console.error('Error message:', err?.message)
-      console.error('Error code:', err?.code)
-      console.error('Error details:', err?.details)
-      console.error('Error hint:', err?.hint)
-      setError('Unable to save preferences: ' + String(err?.message ?? e))
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Please try again.'
+      setError('Unable to save preferences. ' + msg)
     } finally {
       setLoading(false)
     }
@@ -170,85 +145,78 @@ export default function Step3Household() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+      {/* Progress bar */}
+      <View style={styles.progressBg}>
+        <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Progress bar — stays outside ScrollView */}
-        <View style={styles.progressBg}>
-          <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
-        </View>
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.backArrow}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.stepCounter}>3 of 3</Text>
-          </View>
-
-          <Text style={styles.title}>Tell us about{'\n'}your household</Text>
-          <Text style={styles.subtitle}>This helps us personalize your experience</Text>
-
-          {/* Section 1: Household size */}
-          <Text style={styles.sectionLabel}>How many people do you shop for?</Text>
-          <OptionRow
-            options={HOUSEHOLD_OPTIONS}
-            selected={householdSize}
-            onSelect={setHouseholdSize}
-          />
-
-          {/* Section 2: Weekly budget */}
-          <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
-            Weekly grocery budget?
-          </Text>
-          <OptionRow
-            options={BUDGET_OPTIONS}
-            selected={weeklyBudget}
-            onSelect={setWeeklyBudget}
-          />
-
-          {/* Section 3: Shopping frequency */}
-          <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
-            How often do you shop?
-          </Text>
-          <OptionRow
-            options={FREQUENCY_OPTIONS}
-            selected={shoppingFrequency}
-            onSelect={setShoppingFrequency}
-            twoColumn
-          />
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-        </ScrollView>
-
-        {/* Continue button — outside ScrollView, inside KeyboardAvoidingView */}
-        <View style={styles.buttonArea}>
+        {/* Header */}
+        <View style={styles.headerRow}>
           <TouchableOpacity
-            style={[styles.continueButton, (!isComplete || loading) && styles.continueButtonDisabled]}
-            onPress={handleContinue}
-            disabled={!isComplete || loading}
-            activeOpacity={0.85}
+            style={styles.backButton}
+            onPress={() => router.back()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.continueButtonText}>Let's start saving! 🛒</Text>
-            )}
+            <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
+          <Text style={styles.stepCounter}>3 of 3</Text>
         </View>
-      </KeyboardAvoidingView>
+
+        <Text style={styles.title}>Tell us about{'\n'}your household</Text>
+        <Text style={styles.subtitle}>This helps us personalize your experience</Text>
+
+        {/* Section 1: Household size */}
+        <Text style={styles.sectionLabel}>How many people do you shop for?</Text>
+        <OptionRow
+          options={HOUSEHOLD_OPTIONS}
+          selected={householdSize}
+          onSelect={setHouseholdSize}
+        />
+
+        {/* Section 2: Weekly budget */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+          Weekly grocery budget?
+        </Text>
+        <OptionRow
+          options={BUDGET_OPTIONS}
+          selected={weeklyBudget}
+          onSelect={setWeeklyBudget}
+        />
+
+        {/* Section 3: Shopping frequency */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+          How often do you shop?
+        </Text>
+        <OptionRow
+          options={FREQUENCY_OPTIONS}
+          selected={shoppingFrequency}
+          onSelect={setShoppingFrequency}
+          twoColumn
+        />
+
+        {error && <Text style={styles.errorText}>{error}</Text>}
+      </ScrollView>
+
+      {/* Continue button */}
+      <View style={styles.buttonArea}>
+        <TouchableOpacity
+          style={[styles.continueButton, (!isComplete || loading) && styles.continueButtonDisabled]}
+          onPress={handleContinue}
+          disabled={!isComplete || loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.continueButtonText}>Let's start saving! 🛒</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   )
 }

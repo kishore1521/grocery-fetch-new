@@ -48,6 +48,7 @@ Supabase project: [PASTE YOUR SUPABASE PROJECT URL HERE]
 | Crashes          | Sentry                          | Wrap app in Sentry provider        |
 | Notifications    | Expo Push Notifications         | V1 only — two notification types   |
 | Build/Deploy     | EAS Build                       | TestFlight for iOS beta            |
+| Keyboard         | react-native-keyboard-controller | Replaces KeyboardAvoidingView everywhere |
 
 ---
 
@@ -599,6 +600,18 @@ NEVER pass the Gemini key to the mobile app.
 9. Never hardcode store names, IDs, or prices — always from database.
 10. All images need fallback (loading state + error state).
 
+### KEYBOARD HANDLING — MANDATORY FOR ALL SCREENS:
+- Never use KeyboardAvoidingView anywhere
+- For screens with pinned bottom input:
+  Use KeyboardStickyView from react-native-keyboard-controller
+  wrapping the bottom input bar
+- For forms/modals:
+  Use Modal with presentationStyle="pageSheet"
+  (iOS handles keyboard automatically)
+- SectionList/FlatList with text inputs:
+  Add keyboardDismissMode="interactive"
+  and keyboardShouldPersistTaps="handled"
+
 ### Error handling pattern (use everywhere):
 ```typescript
 try {
@@ -748,3 +761,4 @@ Next action: Rebuild add-item UX with grouped product search
 | May 2026 | Replaced 5 dummy products with 72 real products | Full catalog across 5 Deer Park area stores |
 | May 2026 | Replaced dummy stores with 5 real Deer Park stores | ShopRite, Stop&Shop, Aldi, BJs, Costco |
 | May 2026 | Generic product names for store brand items | Bowl&Basket/Kirkland etc tracked in store_brand_name on prices |
+| May 2026 | Replaced KeyboardAvoidingView with react-native-keyboard-controller | KAV is unreliable in complex layouts, keyboard-controller uses native animation hooks |
