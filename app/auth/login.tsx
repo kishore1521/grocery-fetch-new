@@ -709,6 +709,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: '#051F20',
+    letterSpacing: 0,
   },
   inputFocused: {
     borderColor: '#235347',

@@ -4,17 +4,20 @@ import { GroceryList, GroceryListItem } from '../types'
 interface ListState {
   activeList: GroceryList | null
   items: GroceryListItem[]
+  listRefreshKey: number
   setActiveList: (list: GroceryList | null) => void
   setItems: (items: GroceryListItem[]) => void
   addItem: (item: GroceryListItem) => void
   removeItem: (id: string) => void
   toggleItem: (id: string) => void
   clearList: () => void
+  bumpRefreshKey: () => void
 }
 
 export const useListStore = create<ListState>((set) => ({
   activeList: null,
   items: [],
+  listRefreshKey: 0,
   setActiveList: (activeList) => set({ activeList }),
   setItems: (items) => set({ items }),
   addItem: (item) => set((state) => ({ items: [...state.items, item] })),
@@ -23,4 +26,5 @@ export const useListStore = create<ListState>((set) => ({
     items: state.items.map(i => i.id === id ? { ...i, is_checked: !i.is_checked } : i)
   })),
   clearList: () => set({ items: [] }),
+  bumpRefreshKey: () => set((state) => ({ listRefreshKey: state.listRefreshKey + 1 })),
 }))

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useListStore } from '../stores/listStore'
@@ -10,6 +10,7 @@ export function useList() {
   const { activeList, items, setActiveList, setItems, addItem, removeItem, toggleItem } = store
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isShared, setIsShared] = useState(false)
 
   // ─── Fetch / create active list ───────────────────────────────────────────
 
@@ -18,10 +19,35 @@ export function useList() {
     setLoading(true)
     setError(null)
     try {
+      // ── Check if current user is a household member ──────────────────────
+      let listOwnerId = session.user.id
+
+      const { data: memberRow } = await supabase
+        .from('household_members')
+        .select('owner_user_id')
+        .eq('member_user_id', session.user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
+      if (memberRow?.owner_user_id) {
+        listOwnerId = memberRow.owner_user_id as string
+        setIsShared(true)
+      } else {
+        // Check if I'm an owner with an accepted member
+        const { data: ownerRow } = await supabase
+          .from('household_members')
+          .select('id')
+          .eq('owner_user_id', session.user.id)
+          .eq('status', 'accepted')
+          .maybeSingle()
+        setIsShared(ownerRow !== null)
+      }
+
+      // ── Fetch or create list using resolved owner ID ──────────────────────
       const { data: lists, error: listError } = await supabase
         .from('grocery_lists')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', listOwnerId)
         .eq('is_completed', false)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -32,6 +58,12 @@ export function useList() {
       if (lists && lists.length > 0) {
         list = lists[0] as GroceryList
       } else {
+        // Don't create a list on behalf of an owner — only create for self
+        if (listOwnerId !== session.user.id) {
+          setActiveList(null)
+          setItems([])
+          return
+        }
         const { data: newList, error: createError } = await supabase
           .from('grocery_lists')
           .insert({ user_id: session.user.id, name: 'My List' })
@@ -58,6 +90,63 @@ export function useList() {
       setLoading(false)
     }
   }, [session?.user.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Realtime subscription ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!activeList?.id) return
+
+    const channel = supabase
+      .channel('list-' + activeList.id)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'grocery_list_items',
+          filter: 'list_id=eq.' + activeList.id,
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const { data } = await supabase
+              .from('grocery_list_items')
+              .select(`
+                *,
+                product:products(
+                  id, name, brand, category, unit,
+                  image_url, concept, variant_type, size_label
+                )
+              `)
+              .eq('id', (payload.new as { id: string }).id)
+              .single()
+            if (data) {
+              const current = useListStore.getState().items
+              if (!current.find(i => i.id === (data as GroceryListItem).id)) {
+                useListStore.getState().addItem(data as GroceryListItem)
+              }
+            }
+          }
+          if (payload.eventType === 'UPDATE') {
+            const current = useListStore.getState().items
+            useListStore.getState().setItems(
+              current.map(i =>
+                i.id === (payload.new as { id: string }).id
+                  ? { ...i, ...(payload.new as Partial<GroceryListItem>) }
+                  : i
+              )
+            )
+          }
+          if (payload.eventType === 'DELETE') {
+            useListStore.getState().removeItem((payload.old as { id: string }).id)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [activeList?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Quantity (internal) ──────────────────────────────────────────────────
 
@@ -446,6 +535,7 @@ export function useList() {
     items,
     loading,
     error,
+    isShared,
     fetchActiveList,
     // legacy
     addProductToList,

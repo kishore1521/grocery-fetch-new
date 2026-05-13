@@ -1,7 +1,7 @@
 # CLAUDE.md — Grocery Fetch
 # READ THIS FILE COMPLETELY BEFORE WRITING ANY CODE
 # Last updated: May 2026
-# Project stage: Week 0 — Setup complete, starting Week 1
+# Project stage: Week 4 — Household sharing complete, starting Week 5
 
 ---
 
@@ -381,16 +381,24 @@ price_at_add      decimal(10,2)  nullable
 ```
 
 ### TABLE: household_members
-Shared list access between two users.
+Shared list access between two users. Owner generates invite code; member joins with it.
 ```
-id              uuid  PK
-owner_user_id   uuid  FK → users.id
-member_user_id  uuid  FK → users.id  nullable
-invited_email   text
-status          text  ('pending','accepted','declined')
-created_at      timestamp  default now()
+id                uuid  PK
+owner_user_id     uuid  FK → users.id
+member_user_id    uuid  FK → users.id  nullable
+invited_email     text
+status            text  ('pending','accepted','declined')
+invite_code       text  nullable  (6-char alphanumeric, uppercase, no ambiguous chars)
+invite_expires_at timestamp  nullable  (48 hours from code generation)
+created_at        timestamp  default now()
 ```
-Unique constraint: (owner_user_id, member_user_id)
+Unique constraints: (owner_user_id, member_user_id), (owner_user_id) — one active household per owner
+
+RLS policies added:
+- lookup_pending_invite: allows any authenticated user to SELECT rows by invite_code (needed for join flow)
+- accept_pending_invite: allows authenticated user to UPDATE row where invite_code matches (sets member_user_id + status='accepted')
+- household_members_can_read_owner_list: allows accepted member to SELECT from grocery_lists owned by household owner
+- household_members_can_write_list_items: allows accepted member to INSERT/UPDATE/DELETE grocery_list_items on owner's list
 
 ### TABLE: receipts
 Scanned receipt header.
@@ -707,32 +715,32 @@ try {
 ## V1 FEATURES — BUILD THESE AND ONLY THESE
 
 Week 1:
-- [ ] Login (email/password + Google + guest)
-- [ ] Sign up
-- [ ] Onboarding (3 steps: zip, stores, household size)
-- [ ] Route guard (not logged in → login screen)
+- [x] Login (email/password + Google + guest)
+- [x] Sign up
+- [x] Onboarding (3 steps: zip, stores, household size)
+- [x] Route guard (not logged in → login screen)
 
 Week 2:
-- [ ] My List tab (empty state + list display)
-- [ ] Add product from database (search)
-- [ ] Add custom item (free text)
-- [ ] Auto-categorize items
-- [ ] Check off items
-- [ ] Delete items (swipe left)
-- [ ] Repeat last list
+- [x] My List tab (empty state + list display)
+- [x] Add product from database (search)
+- [x] Add custom item (free text)
+- [x] Auto-categorize items
+- [x] Check off items
+- [x] Delete items (swipe left)
+- [x] Repeat last list (category-grouped modal, per-item checkboxes, selective import, price carry-over)
 
 Week 3:
-- [ ] Live cost estimate (per-store running total as list is built)
-- [ ] Where to shop screen (cheapest store + split trip option)
-- [ ] Price search tab
-- [ ] Product detail with price comparison
+- [x] Live cost estimate (per-store running total as list is built)
+- [x] Where to shop screen (cheapest store + split trip option)
+- [x] Price search tab
+- [x] Product detail with price comparison
 
 Week 4:
 - [ ] Budget setup and home widget
 - [ ] Home screen (active list preview + store grid + budget)
-- [ ] Profile tab
+- [x] Profile tab
 - [ ] Account deletion (App Store required)
-- [ ] Household sharing (invite by email)
+- [x] Household sharing (invite code — owner generates, member joins with 6-char code, Realtime sync)
 
 Week 5:
 - [ ] Receipt upload (camera + photo library)
@@ -830,11 +838,12 @@ feature/receipts               ← future
 
 ## CURRENT STATUS
 
+Week: 4 — Profile + Household Sharing (merged to main)
 Active branch: main
-Feature branches: feature/household-sharing (local only, not pushed)
-Currently building: —
+Last completed: Household sharing with invite codes, Realtime list sync, profile tab, i18n across all screens
+Currently building: Week 4 remainder (Budget setup, Home screen, Account deletion)
 Known issues: None
-Next action: Start next feature branch off main
+Next action: Budget setup + Home screen, then Account deletion to complete Week 4
 
 ### What's done (on main)
 - Week 1: Auth, signup, onboarding, route guard
@@ -844,10 +853,7 @@ Next action: Start next feature branch off main
   - step1-language.tsx as first onboarding step
   - Guest mode removed
   - Back-swipe to auth/onboarding fixed (router.replace throughout)
-
-### What's built but not yet on main
 - Week 4 partial: Profile tab, household sharing with invite codes, Realtime sync
-  → lives on feature/household-sharing (local only, not pushed)
 
 ---
 
@@ -881,6 +887,12 @@ Next action: Start next feature branch off main
 | May 2026 | Feature branch strategy — never build on main | Each feature gets its own branch; merge to main only when ready to ship |
 | May 2026 | i18n merges to main FIRST before any other feature | Language is cross-cutting; all future branches must inherit it to avoid retrofitting |
 | May 2026 | Language tied to account, not device | Saved in user_preferences.language, loaded via authStore — syncs across devices |
-| May 2026 | Language picker on signup (Option A) | Language shown at top of signup form; saved to user_preferences after account creates |
 | May 2026 | Language as first onboarding step | New step1-language.tsx added; existing step1-zip/step2-stores/step3-household shift +1 |
 | May 2026 | i18n package: i18next + react-i18next + expo-localization | Industry standard, works well with React Native, Claude Code knows it deeply |
+| May 2026 | Household sharing via invite code not email | Simpler UX — owner generates 6-char code, member types it in; no email required |
+| May 2026 | Unique constraint on household_members.owner_user_id | One active household per owner; required for upsert onConflict in generateCode flow |
+| May 2026 | listRefreshKey in Zustand for cross-component refresh | Profile bumps key after join/leave; List watches key in useEffect deps to re-fetch |
+| May 2026 | letterSpacing: 0 on all text inputs | Prevents style bleed from code input (letterSpacing: 8) leaking into adjacent inputs |
+| May 2026 | useListStore.getState() in Realtime handlers | Avoids stale closure — always reads current items/setItems without re-subscribing |
+| May 2026 | Clear activeList + items on household leave | Prevents RLS 42501 error — old list pointer becomes unauthorized after membership deleted |
+| May 2026 | "Add from last trip" button with selective import | Replaced blind repeat — modal shows category-grouped items with checkboxes, all pre-checked |
