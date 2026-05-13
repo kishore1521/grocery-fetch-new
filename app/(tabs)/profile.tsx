@@ -2,9 +2,16 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Path, Circle, Line } from 'react-native-svg'
+import { useTranslation } from 'react-i18next'
 import { colors } from '../../constants/colors'
 import { useAuthStore } from '../../stores/authStore'
 import { supabase } from '../../lib/supabase'
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en', flag: '🇺🇸', label: 'English' },
+  { code: 'ko', flag: '🇰🇷', label: '한국어' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+]
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +65,17 @@ function HelpIcon() {
   )
 }
 
+function GlobeIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
+      stroke={colors.primary} strokeWidth={1.8} strokeLinecap="round">
+      <Circle cx="12" cy="12" r="10" />
+      <Path d="M2 12h20" />
+      <Path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+    </Svg>
+  )
+}
+
 // ─── Row component ────────────────────────────────────────────────────────────
 
 function SettingsRow({
@@ -103,18 +121,32 @@ function SettingsRow({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-  const { session, isGuest } = useAuthStore()
+  const { t } = useTranslation()
+  const { session, isGuest, language, setLanguage } = useAuthStore()
 
   const email = session?.user?.email ?? 'Guest'
   const initials = email === 'Guest'
     ? 'G'
     : email.slice(0, 2).toUpperCase()
 
+  const handleLanguageChange = async (code: string) => {
+    setLanguage(code)
+    if (!isGuest && session?.user?.id) {
+      try {
+        await supabase
+          .from('user_preferences')
+          .upsert({ user_id: session.user.id, language: code }, { onConflict: 'user_id' })
+      } catch (e) {
+        console.error('[Profile] language save error:', e)
+      }
+    }
+  }
+
   const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.signOutTitle'), t('profile.signOutMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('profile.signOut'),
         style: 'destructive',
         onPress: async () => { await supabase.auth.signOut() },
       },
@@ -135,7 +167,7 @@ export default function ProfileScreen() {
 
         <SafeAreaView edges={['top']}>
           <View style={styles.heroInner}>
-            <Text style={styles.heroLabel}>ACCOUNT</Text>
+            <Text style={styles.heroLabel}>{t('profile.heroLabel')}</Text>
 
             <View style={styles.heroAvatarRow}>
               {/* Avatar */}
@@ -149,12 +181,12 @@ export default function ProfileScreen() {
 
               <View style={styles.heroUserInfo}>
                 <Text style={styles.heroName}>
-                  {isGuest ? 'Guest User' : (session?.user?.user_metadata?.first_name as string | undefined) ?? 'Shopper'}
+                  {isGuest ? t('profile.guestUser') : (session?.user?.user_metadata?.first_name as string | undefined) ?? t('profile.shopper')}
                 </Text>
                 <Text style={styles.heroEmail}>{email}</Text>
                 {isGuest && (
                   <View style={styles.guestBadge}>
-                    <Text style={styles.guestBadgeText}>GUEST</Text>
+                    <Text style={styles.guestBadgeText}>{t('profile.guestBadge')}</Text>
                   </View>
                 )}
               </View>
@@ -171,52 +203,81 @@ export default function ProfileScreen() {
         >
 
           {/* Preferences section */}
-          <Text style={styles.groupLabel}>PREFERENCES</Text>
+          <Text style={styles.groupLabel}>{t('profile.sectionPreferences')}</Text>
           <View style={styles.settingsCard}>
             <SettingsRow
               icon={<StoreIcon />}
-              label="My Stores"
-              sublabel="Manage your preferred stores"
+              label={t('profile.myStores')}
+              sublabel={t('profile.myStoresSub')}
               onPress={() => Alert.alert('Coming soon', 'Store preferences coming in Week 4')}
             />
             <SettingsRow
               icon={<BellIcon />}
-              label="Notifications"
-              sublabel="Weekly reminders and alerts"
+              label={t('profile.notifications')}
+              sublabel={t('profile.notificationsSub')}
               onPress={() => Alert.alert('Coming soon', 'Notification settings coming in Week 6')}
-              last
             />
+            {/* Language row — inline picker */}
+            <View style={styles.langSection}>
+              <View style={styles.langHeaderRow}>
+                <View style={styles.settingsIconWrap}>
+                  <GlobeIcon />
+                </View>
+                <View style={styles.settingsRowContent}>
+                  <Text style={styles.settingsLabel}>{t('profile.language')}</Text>
+                  <Text style={styles.settingsSublabel}>{t('profile.languageSubtitle')}</Text>
+                </View>
+              </View>
+              <View style={styles.langPillRow}>
+                {LANGUAGE_OPTIONS.map((lang) => {
+                  const isSelected = (language ?? 'en') === lang.code
+                  return (
+                    <TouchableOpacity
+                      key={lang.code}
+                      style={[styles.langPill, isSelected && styles.langPillSelected]}
+                      onPress={() => handleLanguageChange(lang.code)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.langPillFlag}>{lang.flag}</Text>
+                      <Text style={[styles.langPillText, isSelected && styles.langPillTextSelected]}>
+                        {lang.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
           </View>
 
           {/* Account section */}
-          <Text style={[styles.groupLabel, { marginTop: 24 }]}>ACCOUNT</Text>
+          <Text style={[styles.groupLabel, { marginTop: 24 }]}>{t('profile.sectionAccount')}</Text>
           <View style={styles.settingsCard}>
             <SettingsRow
               icon={<ShieldIcon />}
-              label="Privacy Policy"
+              label={t('profile.privacyPolicy')}
               onPress={() => Alert.alert('Coming soon', 'Privacy policy URL coming before launch')}
             />
             <SettingsRow
               icon={<HelpIcon />}
-              label="Help & Support"
+              label={t('profile.helpSupport')}
               onPress={() => Alert.alert('Coming soon', 'Help center coming in Week 6')}
               last
             />
           </View>
 
           {/* Sign out */}
-          <Text style={[styles.groupLabel, { marginTop: 24 }]}>SESSION</Text>
+          <Text style={[styles.groupLabel, { marginTop: 24 }]}>{t('profile.sectionSession')}</Text>
           <View style={styles.settingsCard}>
             <TouchableOpacity
               style={styles.signOutRow}
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
-              <Text style={styles.signOutText}>Sign Out</Text>
+              <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.versionText}>Grocery Fetch · Week 2 Build</Text>
+          <Text style={styles.versionText}>{t('profile.version')}</Text>
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -388,6 +449,53 @@ const styles = StyleSheet.create({
   settingsSublabel: {
     fontSize: 12,
     color: colors.textTertiary,
+  },
+
+  // Language picker
+  langSection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.surfaceSecondary,
+  },
+  langHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  langPillRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingLeft: 48,
+  },
+  langPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    height: 38,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  langPillSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  langPillFlag: {
+    fontSize: 14,
+  },
+  langPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  langPillTextSelected: {
+    color: colors.primary,
   },
 
   // Sign out

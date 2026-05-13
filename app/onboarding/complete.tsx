@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, Animated } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 
 export default function OnboardingComplete() {
+  const { t } = useTranslation()
   const { isGuest } = useAuthStore()
   const [firstName, setFirstName] = useState('Shopper')
 
@@ -61,9 +63,9 @@ export default function OnboardingComplete() {
 
         {/* Text content */}
         <Animated.View style={{ opacity: fadeAnim }}>
-          <Text style={styles.heading}>You're all set!</Text>
+          <Text style={styles.heading}>{t('onboarding.complete.heading')}</Text>
           <Text style={styles.subText}>
-            {firstName}, let's find you the best prices{'\n'}on Long Island.
+            {t('onboarding.complete.subText', { name: firstName })}
           </Text>
         </Animated.View>
       </View>

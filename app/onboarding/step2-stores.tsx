@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { onboardingData } from '../../lib/onboardingState'
 
 const { width: screenWidth } = Dimensions.get('window')
@@ -92,6 +93,7 @@ function Toggle({ value, onToggle }: ToggleProps) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function Step2Stores() {
+  const { t } = useTranslation()
   // Restore selection from onboardingData if user came back
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     onboardingData.selectedStores
@@ -106,7 +108,7 @@ export default function Step2Stores() {
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: 66,
+      toValue: 75,
       duration: 300,
       useNativeDriver: false,
     }).start()
@@ -176,7 +178,9 @@ export default function Step2Stores() {
         >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.stepCounter}>2 of 3</Text>
+        <Text style={styles.stepCounter}>
+          {t('onboarding.stepCounter', { step: 3, total: 4 })}
+        </Text>
       </View>
 
       <ScrollView
@@ -185,8 +189,8 @@ export default function Step2Stores() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Where do you{'\n'}usually shop?</Text>
-        <Text style={styles.subtitle}>Select all that apply</Text>
+        <Text style={styles.title}>{t('onboarding.stores.title')}</Text>
+        <Text style={styles.subtitle}>{t('onboarding.stores.subtitle')}</Text>
 
         {/* Store card grid */}
         <View style={styles.storeGrid}>
@@ -228,7 +232,7 @@ export default function Step2Stores() {
         <Animated.View
           style={[styles.loyaltySection, { maxHeight: maxLoyaltyH, overflow: 'hidden' }]}
         >
-          <Text style={styles.loyaltyTitle}>Do you have these loyalty cards?</Text>
+          <Text style={styles.loyaltyTitle}>{t('onboarding.stores.loyaltyTitle')}</Text>
           {loyaltyRows.map(row => (
             <View key={row.id} style={styles.loyaltyRow}>
               <View style={styles.loyaltyLeft}>
@@ -249,7 +253,7 @@ export default function Step2Stores() {
           disabled={!isComplete}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

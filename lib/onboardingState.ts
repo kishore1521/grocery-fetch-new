@@ -2,6 +2,7 @@
 // Simple module-level object — no Zustand needed for a 3-step linear flow.
 
 export const onboardingData = {
+  language: 'en',
   zipCode: '',
   selectedStores: [] as string[],
   loyaltyShoprite: false,
@@ -9,6 +10,7 @@ export const onboardingData = {
 }
 
 export const resetOnboardingData = () => {
+  onboardingData.language = 'en'
   onboardingData.zipCode = ''
   onboardingData.selectedStores = []
   onboardingData.loyaltyShoprite = false

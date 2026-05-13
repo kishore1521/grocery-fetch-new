@@ -784,6 +784,40 @@ DO NOT BUILD (V2+):
 
 ---
 
+## BRANCHING STRATEGY — MANDATORY
+
+Every feature lives on its own branch. Never build directly on main.
+
+### Branch naming
+```
+feature/i18n-language          ← language selection (FIRST to merge — foundational)
+feature/household-sharing      ← already built locally, not yet merged
+feature/budget                 ← future
+feature/home-screen            ← future
+feature/receipts               ← future
+```
+
+### Rules
+1. Always branch from main: `git checkout main && git checkout -b feature/name`
+2. Before merging any feature → pull latest main into the feature branch first
+3. `feature/i18n-language` MUST merge to main before any other feature is created or merged
+   Reason: i18n is cross-cutting — every string in every screen uses it.
+   If another feature merges before i18n, it will have hardcoded strings that need to be
+   retrofitted later. Build the foundation first.
+4. After i18n merges to main, every new feature uses `t('key')` from day one — never hardcode strings
+
+### Current branch state (May 2026)
+- `main` = clean, through "Repeat last trip" commit. Weeks 1–3 complete.
+- `feature/household-sharing` = local only, not pushed. Contains Week 4 household work.
+- Next branch to create: `feature/i18n-language` off main
+
+### Merge order going forward
+1. `feature/i18n-language` → main  (do this first)
+2. `feature/household-sharing` → merge main into it → add t() calls → merge to main
+3. All other features → branch from main (already has i18n) → build → merge to main
+
+---
+
 ## WHAT TO DO AT THE START OF EVERY CLAUDE CODE SESSION
 
 1. Tell Claude Code: "Read CLAUDE.md before doing anything"
@@ -796,12 +830,33 @@ DO NOT BUILD (V2+):
 
 ## CURRENT STATUS
 
-Week: 2 — Grocery List (in progress)
-Active branch: main
-Last completed: Fintech design system applied to all tab screens (hero+sheet pattern)
-Currently building: Week 2 feature completion
+Active branch: feature/i18n-language (ready to merge to main)
+Feature branches: feature/household-sharing (local only, not pushed)
+Currently building: —
 Known issues: None
-Next action: Continue Week 2 features or start Week 3
+Next action: Merge feature/i18n-language → main, then continue Week 4 features
+
+### What's done (on main)
+- Week 1: Auth, signup, onboarding, route guard
+- Week 2: My List tab, add product/custom item, check off, delete, repeat last list
+- Week 3: Live cost estimate, Where to Shop, price search, product detail
+
+### What's done on feature/i18n-language (ready to merge)
+- Language selection: English / Korean / Spanish
+- Language picker on signup form + as first onboarding step (step1-language.tsx)
+- Existing onboarding steps shifted: zip=step2, stores=step3, household=step4
+- Language saved to user_preferences.language in Supabase (upserted on onboarding complete)
+- Language loaded on login for returning users (checkOnboarding in _layout.tsx)
+- Language change from Profile tab (inline pill picker, saves to Supabase live)
+- ALL strings in ALL screens wrapped in t(): index, search, list, profile, auth, onboarding
+- i18next + react-i18next, compatibilityJSON: 'v4', useSuspense: false
+- lib/i18n.ts initializes i18n; imported in _layout.tsx so it runs before any screen renders
+- authStore extended: language field + setLanguage() action (calls i18n.changeLanguage)
+- locales/en.json, ko.json, es.json — complete translations for all sections
+
+### What's built but not yet on main
+- Week 4 partial: Profile tab, household sharing with invite codes, Realtime sync
+  → lives on feature/household-sharing (local only, not pushed)
 
 ---
 
@@ -832,3 +887,9 @@ Next action: Continue Week 2 features or start Week 3
 | May 2026 | Fintech design system — hero+sheet layout on every screen | Inspired by Robinhood/Cash App/Instacart. Dark green gradient hero, white rounded sheet, #00A651 primary. Applied to all tabs. |
 | May 2026 | Switched from NativeWind to StyleSheet | NativeWind className approach abandoned — all styles now use React Native StyleSheet directly |
 | May 2026 | 5-tab layout: Home, Search, Scan, List, Profile | Center Scan tab is elevated green circle button routing to /receipt/upload |
+| May 2026 | Feature branch strategy — never build on main | Each feature gets its own branch; merge to main only when ready to ship |
+| May 2026 | i18n merges to main FIRST before any other feature | Language is cross-cutting; all future branches must inherit it to avoid retrofitting |
+| May 2026 | Language tied to account, not device | Saved in user_preferences.language, loaded via authStore — syncs across devices |
+| May 2026 | Language picker on signup (Option A) | Language shown at top of signup form; saved to user_preferences after account creates |
+| May 2026 | Language as first onboarding step | New step1-language.tsx added; existing step1-zip/step2-stores/step3-household shift +1 |
+| May 2026 | i18n package: i18next + react-i18next + expo-localization | Industry standard, works well with React Native, Claude Code knows it deeply |

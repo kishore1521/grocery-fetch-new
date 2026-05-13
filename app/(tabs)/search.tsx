@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Circle, Line, Path } from 'react-native-svg'
+import { useTranslation } from 'react-i18next'
 import { colors } from '../../constants/colors'
 
 function SearchBigIcon() {
@@ -15,6 +16,7 @@ function SearchBigIcon() {
 }
 
 export default function SearchScreen() {
+  const { t } = useTranslation()
   return (
     <View style={styles.root}>
 
@@ -29,9 +31,9 @@ export default function SearchScreen() {
 
         <SafeAreaView edges={['top']}>
           <View style={styles.heroInner}>
-            <Text style={styles.heroLabel}>PRICE COMPARISON</Text>
-            <Text style={styles.heroTitle}>Find the{'\n'}Best Price</Text>
-            <Text style={styles.heroSub}>Search across 5 Long Island stores</Text>
+            <Text style={styles.heroLabel}>{t('search.heroLabel')}</Text>
+            <Text style={styles.heroTitle}>{t('search.heroTitle')}</Text>
+            <Text style={styles.heroSub}>{t('search.heroSub')}</Text>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -42,11 +44,8 @@ export default function SearchScreen() {
           <View style={styles.emptyIconWrap}>
             <SearchBigIcon />
           </View>
-          <Text style={styles.emptyTitle}>Price Search</Text>
-          <Text style={styles.emptySub}>
-            Full price search and comparison coming in Week 3.{'\n'}
-            Use the search bar in My List to compare prices while building your list.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('search.emptyTitle')}</Text>
+          <Text style={styles.emptySub}>{t('search.emptySub')}</Text>
         </View>
       </View>
 

@@ -1,3 +1,4 @@
+import '../lib/i18n'
 import { useEffect } from 'react'
 import { Stack, router } from 'expo-router'
 import { supabase } from '../lib/supabase'
@@ -9,17 +10,21 @@ const checkOnboarding = async (userId: string) => {
   try {
     const { data } = await supabase
       .from('user_preferences')
-      .select('zip_code')
+      .select('zip_code, language')
       .eq('user_id', userId)
       .single()
+
+    // Restore saved language for returning users
+    if (data?.language) {
+      useAuthStore.getState().setLanguage(data.language)
+    }
 
     if (data?.zip_code) {
       router.replace('/(tabs)/')
     } else {
-      router.replace('/onboarding/step1-zip')
+      router.replace('/onboarding/step1-language')
     }
   } catch {
-    // On error, send to tabs — better than being stuck on a spinner
     router.replace('/(tabs)/')
   }
 }
@@ -47,7 +52,6 @@ export default function RootLayout() {
     if (session) {
       checkOnboarding(session.user.id)
     } else if (!isGuest) {
-      // isGuest = true means login screen already routed to onboarding — don't override
       router.replace('/auth/login')
     }
   }, [session, isLoading, isGuest])
