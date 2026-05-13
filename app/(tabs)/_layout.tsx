@@ -1,7 +1,5 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Tabs } from 'expo-router'
-import { router } from 'expo-router'
-import Svg, { Path, Circle, Line, Rect } from 'react-native-svg'
+import Svg, { Path, Circle, Line } from 'react-native-svg'
 import { colors } from '../../constants/colors'
 
 // ─── Tab Icons ────────────────────────────────────────────────────────────────
@@ -12,26 +10,6 @@ function HomeIcon({ color }: { color: string }) {
       stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
       <Path d="M9 22V12h6v10" />
-    </Svg>
-  )
-}
-
-function SearchIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-      stroke={color} strokeWidth={1.8} strokeLinecap="round">
-      <Circle cx="11" cy="11" r="8" />
-      <Line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </Svg>
-  )
-}
-
-function CameraIcon() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-      stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-      <Circle cx="12" cy="13" r="4" />
     </Svg>
   )
 }
@@ -57,22 +35,6 @@ function ProfileIcon({ color }: { color: string }) {
       <Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
       <Circle cx="12" cy="7" r="4" />
     </Svg>
-  )
-}
-
-// ─── Center Scan Button ───────────────────────────────────────────────────────
-
-function ScanTabButton() {
-  return (
-    <TouchableOpacity
-      style={styles.scanTabWrap}
-      onPress={() => router.push('/receipt/upload')}
-      activeOpacity={0.85}
-    >
-      <View style={styles.scanTabCircle}>
-        <CameraIcon />
-      </View>
-    </TouchableOpacity>
   )
 }
 
@@ -106,21 +68,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <HomeIcon color={color} />,
         }}
       />
+
+      {/* Search hidden — route still accessible */}
       <Tabs.Screen
         name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color }) => <SearchIcon color={color} />,
-        }}
+        options={{ href: null }}
       />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: '',
-          tabBarButton: () => <ScanTabButton />,
-          tabBarIcon: () => null,
-        }}
-      />
+
       <Tabs.Screen
         name="list"
         options={{
@@ -128,6 +82,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <ListIcon color={color} />,
         }}
       />
+
+      {/* Scan hidden — route still accessible for future use */}
+      <Tabs.Screen
+        name="scan"
+        options={{ href: null }}
+      />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -138,26 +99,3 @@ export default function TabLayout() {
     </Tabs>
   )
 }
-
-const styles = StyleSheet.create({
-  scanTabWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 0,
-    marginTop: -16,
-  },
-  scanTabCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-})
