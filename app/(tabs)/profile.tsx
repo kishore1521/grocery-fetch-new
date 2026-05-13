@@ -275,7 +275,7 @@ export default function ProfileScreen() {
       setCodeModalVisible(true)
     } catch (e) {
       console.error('[Profile] generateCode error:', e)
-      Alert.alert('Error', 'Could not generate code. Please try again.')
+      Alert.alert(t('common.error'), t('household.generateError'))
     } finally {
       setGeneratingCode(false)
     }
@@ -306,14 +306,14 @@ export default function ProfileScreen() {
       if (error) throw error
 
       if (!data) {
-        setJoinError('Invalid or expired code. Ask the list owner to generate a new one.')
+        setJoinError(t('household.invalidCode'))
         return
       }
 
       const row = data as { id: string; owner_user_id: string; status: string }
 
       if (row.owner_user_id === session.user.id) {
-        setJoinError("You can't join your own household.")
+        setJoinError(t('household.cantJoinOwn'))
         return
       }
 
@@ -339,7 +339,7 @@ export default function ProfileScreen() {
       }, 2000)
     } catch (e) {
       console.error('[Profile] joinHousehold error:', e)
-      setJoinError('Something went wrong. Please try again.')
+      setJoinError(t('household.joinError'))
     } finally {
       setJoining(false)
     }
@@ -348,12 +348,12 @@ export default function ProfileScreen() {
   // ── Leave household ───────────────────────────────────────────────────────
   const handleLeave = () => {
     Alert.alert(
-      'Leave Household',
-      'You will no longer share a grocery list. Are you sure?',
+      t('household.leaveAlertTitle'),
+      t('household.leaveAlertMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('household.leaveAlertBtn'),
           style: 'destructive',
           onPress: async () => {
             if (!householdRow) return
@@ -370,7 +370,7 @@ export default function ProfileScreen() {
               useListStore.getState().bumpRefreshKey()
             } catch (e) {
               console.error('[Profile] leaveHousehold error:', e)
-              Alert.alert('Error', 'Could not leave household. Please try again.')
+              Alert.alert(t('common.error'), t('household.leaveError'))
             } finally {
               setLeavingHousehold(false)
             }
@@ -500,7 +500,7 @@ export default function ProfileScreen() {
           {/* ── HOUSEHOLD section ── */}
           {!isGuest && (
             <>
-              <Text style={[styles.groupLabel, { marginTop: 24 }]}>HOUSEHOLD</Text>
+              <Text style={[styles.groupLabel, { marginTop: 24 }]}>{t('household.sectionLabel')}</Text>
 
               {householdLoading ? (
                 <View style={styles.householdLoadingCard}>
@@ -514,11 +514,11 @@ export default function ProfileScreen() {
                       <CheckCircleIcon />
                     </View>
                     <View style={styles.householdActiveText}>
-                      <Text style={styles.householdActiveTitle}>Household active</Text>
+                      <Text style={styles.householdActiveTitle}>{t('household.activeTitle')}</Text>
                       <Text style={styles.householdActiveSub}>
                         {isMember
-                          ? "You're sharing the list owner's groceries"
-                          : 'Your list is shared with a household member'}
+                          ? t('household.activeMember')
+                          : t('household.activeOwner')}
                       </Text>
                     </View>
                   </View>
@@ -526,7 +526,7 @@ export default function ProfileScreen() {
                   <View style={styles.householdActiveBadgeRow}>
                     <View style={styles.householdActiveBadge}>
                       <Text style={styles.householdActiveBadgeText}>
-                        👥 List syncs in real time
+                        {t('household.activeSyncBadge')}
                       </Text>
                     </View>
                   </View>
@@ -539,7 +539,7 @@ export default function ProfileScreen() {
                   >
                     {leavingHousehold
                       ? <ActivityIndicator size="small" color={colors.red} />
-                      : <Text style={styles.leaveBtnText}>Leave household</Text>
+                      : <Text style={styles.leaveBtnText}>{t('household.leave')}</Text>
                     }
                   </TouchableOpacity>
                 </View>
@@ -552,9 +552,9 @@ export default function ProfileScreen() {
                         <PeopleIcon />
                       </View>
                       <View style={styles.householdCardText}>
-                        <Text style={styles.householdCardTitle}>Shop together</Text>
+                        <Text style={styles.householdCardTitle}>{t('household.shopTogether')}</Text>
                         <Text style={styles.householdCardSub}>
-                          Invite someone to share your grocery list
+                          {t('household.inviteSub')}
                         </Text>
                       </View>
                     </View>
@@ -566,7 +566,7 @@ export default function ProfileScreen() {
                           onPress={handleShowExistingCode}
                           activeOpacity={0.75}
                         >
-                          <Text style={styles.householdBtnSecondaryText}>Show invite code</Text>
+                          <Text style={styles.householdBtnSecondaryText}>{t('household.showCode')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.householdBtn, generatingCode && { opacity: 0.6 }]}
@@ -576,7 +576,7 @@ export default function ProfileScreen() {
                         >
                           {generatingCode
                             ? <ActivityIndicator size="small" color="#FFFFFF" />
-                            : <Text style={styles.householdBtnText}>New code</Text>
+                            : <Text style={styles.householdBtnText}>{t('household.newCode')}</Text>
                           }
                         </TouchableOpacity>
                       </View>
@@ -589,7 +589,7 @@ export default function ProfileScreen() {
                       >
                         {generatingCode
                           ? <ActivityIndicator size="small" color="#FFFFFF" />
-                          : <Text style={styles.householdBtnText}>Generate invite code</Text>
+                          : <Text style={styles.householdBtnText}>{t('household.generateCode')}</Text>
                         }
                       </TouchableOpacity>
                     )}
@@ -605,8 +605,8 @@ export default function ProfileScreen() {
                       <KeyIcon />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.haveCodeTitle}>Have an invite code?</Text>
-                      <Text style={styles.haveCodeSub}>Join someone else's list</Text>
+                      <Text style={styles.haveCodeTitle}>{t('household.haveCode')}</Text>
+                      <Text style={styles.haveCodeSub}>{t('household.joinSomeonesList')}</Text>
                     </View>
                     <ChevronRight />
                   </TouchableOpacity>
@@ -659,12 +659,12 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
             <View style={{ width: 60 }} />
-            <Text style={styles.modalTitle}>Invite Code</Text>
+            <Text style={styles.modalTitle}>{t('household.codeModalTitle')}</Text>
             <TouchableOpacity
               onPress={() => setCodeModalVisible(false)}
               style={styles.modalDoneBtn}
             >
-              <Text style={styles.modalDoneText}>Done</Text>
+              <Text style={styles.modalDoneText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -674,32 +674,32 @@ export default function ProfileScreen() {
               <View style={styles.codeDisplayIconWrap}>
                 <PeopleIcon color="#FFFFFF" />
               </View>
-              <Text style={styles.codeDisplayLabel}>YOUR INVITE CODE</Text>
+              <Text style={styles.codeDisplayLabel}>{t('household.codeLabel')}</Text>
               <Text style={styles.codeDisplayCode}>
                 {displayCode ? formatCode(displayCode) : ''}
               </Text>
               <Text style={styles.codeDisplaySub}>
-                Share this code with your household member
+                {t('household.codeShareSub')}
               </Text>
               <View style={styles.codeExpiresBadge}>
-                <Text style={styles.codeExpiresText}>⏱ Expires in 24 hours</Text>
+                <Text style={styles.codeExpiresText}>{t('household.codeExpires')}</Text>
               </View>
             </View>
 
             {/* Instructions */}
             <View style={styles.codeInstructionsCard}>
-              <Text style={styles.codeInstructionsTitle}>HOW IT WORKS</Text>
+              <Text style={styles.codeInstructionsTitle}>{t('household.howItWorks')}</Text>
               <View style={styles.codeInstructionRow}>
                 <View style={styles.codeInstructionNum}><Text style={styles.codeInstructionNumText}>1</Text></View>
-                <Text style={styles.codeInstructionText}>Share the code below with your household member</Text>
+                <Text style={styles.codeInstructionText}>{t('household.step1')}</Text>
               </View>
               <View style={styles.codeInstructionRow}>
                 <View style={styles.codeInstructionNum}><Text style={styles.codeInstructionNumText}>2</Text></View>
-                <Text style={styles.codeInstructionText}>They open Grocery Fetch → Profile → "Have a code?"</Text>
+                <Text style={styles.codeInstructionText}>{t('household.step2')}</Text>
               </View>
               <View style={styles.codeInstructionRow}>
                 <View style={styles.codeInstructionNum}><Text style={styles.codeInstructionNumText}>3</Text></View>
-                <Text style={styles.codeInstructionText}>They enter the code and your lists sync instantly</Text>
+                <Text style={styles.codeInstructionText}>{t('household.step3')}</Text>
               </View>
             </View>
 
@@ -708,7 +708,7 @@ export default function ProfileScreen() {
               style={styles.shareCodeBtn}
               onPress={() => {
                 Share.share({
-                  message: `Join my Grocery Fetch list! Enter code: ${displayCode} in the app.`,
+                  message: t('household.shareMessage', { code: displayCode }),
                 })
               }}
               activeOpacity={0.85}
@@ -719,7 +719,7 @@ export default function ProfileScreen() {
                 <Path d="M16 6l-4-4-4 4" />
                 <Line x1="12" y1="2" x2="12" y2="15" />
               </Svg>
-              <Text style={styles.shareCodeBtnText}>Share code</Text>
+              <Text style={styles.shareCodeBtnText}>{t('household.shareBtn')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -738,9 +738,9 @@ export default function ProfileScreen() {
               onPress={() => setJoinModalVisible(false)}
               style={styles.modalCancelBtn}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Join a Household</Text>
+            <Text style={styles.modalTitle}>{t('household.joinModalTitle')}</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -749,8 +749,8 @@ export default function ProfileScreen() {
               /* Success state */
               <View style={styles.joinSuccessWrap}>
                 <Text style={styles.joinSuccessEmoji}>🎉</Text>
-                <Text style={styles.joinSuccessTitle}>You're in!</Text>
-                <Text style={styles.joinSuccessSub}>Your list is now syncing in real time</Text>
+                <Text style={styles.joinSuccessTitle}>{t('household.joinSuccessTitle')}</Text>
+                <Text style={styles.joinSuccessSub}>{t('household.joinSuccessSub')}</Text>
               </View>
             ) : (
               <>
@@ -758,9 +758,9 @@ export default function ProfileScreen() {
                   <View style={[styles.householdIconWrap, { backgroundColor: colors.primaryLight, borderRadius: 14 }]}>
                     <KeyIcon />
                   </View>
-                  <Text style={styles.joinTitle}>Enter invite code</Text>
+                  <Text style={styles.joinTitle}>{t('household.enterCode')}</Text>
                   <Text style={styles.joinSub}>
-                    Ask the list owner to generate a code from their Profile tab
+                    {t('household.enterCodeSub')}
                   </Text>
                 </View>
 
@@ -797,7 +797,7 @@ export default function ProfileScreen() {
                 >
                   {joining
                     ? <ActivityIndicator size="small" color="#FFFFFF" />
-                    : <Text style={styles.joinBtnText}>Join household</Text>
+                    : <Text style={styles.joinBtnText}>{t('household.joinBtn')}</Text>
                   }
                 </TouchableOpacity>
               </>
