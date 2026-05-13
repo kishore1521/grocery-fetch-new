@@ -1,7 +1,6 @@
 import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Tabs } from 'expo-router'
-import { router } from 'expo-router'
-import Svg, { Path, Circle, Line, Rect } from 'react-native-svg'
+import Svg, { Path, Circle, Line } from 'react-native-svg'
 import { colors } from '../../constants/colors'
 
 // ─── Tab Icons ────────────────────────────────────────────────────────────────
@@ -16,40 +15,6 @@ function HomeIcon({ color }: { color: string }) {
   )
 }
 
-function SearchIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-      stroke={color} strokeWidth={1.8} strokeLinecap="round">
-      <Circle cx="11" cy="11" r="8" />
-      <Line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </Svg>
-  )
-}
-
-function CameraIcon() {
-  return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-      stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-      <Circle cx="12" cy="13" r="4" />
-    </Svg>
-  )
-}
-
-function ListIcon({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-      stroke={color} strokeWidth={1.8} strokeLinecap="round">
-      <Line x1="8" y1="6" x2="21" y2="6" />
-      <Line x1="8" y1="12" x2="21" y2="12" />
-      <Line x1="8" y1="18" x2="21" y2="18" />
-      <Line x1="3" y1="6" x2="3.01" y2="6" />
-      <Line x1="3" y1="12" x2="3.01" y2="12" />
-      <Line x1="3" y1="18" x2="3.01" y2="18" />
-    </Svg>
-  )
-}
-
 function ProfileIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
@@ -60,17 +25,31 @@ function ProfileIcon({ color }: { color: string }) {
   )
 }
 
-// ─── Center Scan Button ───────────────────────────────────────────────────────
+// ─── Center List Button ───────────────────────────────────────────────────────
 
-function ScanTabButton() {
+function ListCenterIcon() {
+  return (
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none"
+      stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      {/* Cart body */}
+      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <Line x1="3" y1="6" x2="21" y2="6" />
+      {/* Plus sign */}
+      <Line x1="12" y1="10" x2="12" y2="16" />
+      <Line x1="9" y1="13" x2="15" y2="13" />
+    </Svg>
+  )
+}
+
+function ListTabButton({ onPress }: { onPress?: () => void }) {
   return (
     <TouchableOpacity
-      style={styles.scanTabWrap}
-      onPress={() => router.push('/receipt/upload')}
+      style={styles.listTabWrap}
+      onPress={onPress}
       activeOpacity={0.85}
     >
-      <View style={styles.scanTabCircle}>
-        <CameraIcon />
+      <View style={styles.listTabCircle}>
+        <ListCenterIcon />
       </View>
     </TouchableOpacity>
   )
@@ -106,28 +85,29 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <HomeIcon color={color} />,
         }}
       />
+
+      {/* Search hidden from tab bar — route still accessible */}
       <Tabs.Screen
         name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color }) => <SearchIcon color={color} />,
-        }}
+        options={{ href: null }}
       />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: '',
-          tabBarButton: () => <ScanTabButton />,
-          tabBarIcon: () => null,
-        }}
-      />
+
       <Tabs.Screen
         name="list"
         options={{
-          title: 'My List',
-          tabBarIcon: ({ color }) => <ListIcon color={color} />,
+          title: '',
+          tabBarButton: ({ onPress }) => (
+            <ListTabButton onPress={onPress as () => void} />
+          ),
         }}
       />
+
+      {/* Scan hidden from tab bar — route still accessible for future use */}
+      <Tabs.Screen
+        name="scan"
+        options={{ href: null }}
+      />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -140,14 +120,13 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  scanTabWrap: {
+  listTabWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 0,
     marginTop: -16,
   },
-  scanTabCircle: {
+  listTabCircle: {
     width: 56,
     height: 56,
     borderRadius: 28,
