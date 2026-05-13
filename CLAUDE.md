@@ -1,7 +1,7 @@
 # CLAUDE.md — Grocery Fetch
 # READ THIS FILE COMPLETELY BEFORE WRITING ANY CODE
 # Last updated: May 2026
-# Project stage: Week 0 — Setup complete, starting Week 1
+# Project stage: Week 4 — Household sharing complete, starting Week 5
 
 ---
 
@@ -381,16 +381,24 @@ price_at_add      decimal(10,2)  nullable
 ```
 
 ### TABLE: household_members
-Shared list access between two users.
+Shared list access between two users. Owner generates invite code; member joins with it.
 ```
-id              uuid  PK
-owner_user_id   uuid  FK → users.id
-member_user_id  uuid  FK → users.id  nullable
-invited_email   text
-status          text  ('pending','accepted','declined')
-created_at      timestamp  default now()
+id                uuid  PK
+owner_user_id     uuid  FK → users.id
+member_user_id    uuid  FK → users.id  nullable
+invited_email     text
+status            text  ('pending','accepted','declined')
+invite_code       text  nullable  (6-char alphanumeric, uppercase, no ambiguous chars)
+invite_expires_at timestamp  nullable  (48 hours from code generation)
+created_at        timestamp  default now()
 ```
-Unique constraint: (owner_user_id, member_user_id)
+Unique constraints: (owner_user_id, member_user_id), (owner_user_id) — one active household per owner
+
+RLS policies added:
+- lookup_pending_invite: allows any authenticated user to SELECT rows by invite_code (needed for join flow)
+- accept_pending_invite: allows authenticated user to UPDATE row where invite_code matches (sets member_user_id + status='accepted')
+- household_members_can_read_owner_list: allows accepted member to SELECT from grocery_lists owned by household owner
+- household_members_can_write_list_items: allows accepted member to INSERT/UPDATE/DELETE grocery_list_items on owner's list
 
 ### TABLE: receipts
 Scanned receipt header.
@@ -707,32 +715,32 @@ try {
 ## V1 FEATURES — BUILD THESE AND ONLY THESE
 
 Week 1:
-- [ ] Login (email/password + Google + guest)
-- [ ] Sign up
-- [ ] Onboarding (3 steps: zip, stores, household size)
-- [ ] Route guard (not logged in → login screen)
+- [x] Login (email/password + Google + guest)
+- [x] Sign up
+- [x] Onboarding (3 steps: zip, stores, household size)
+- [x] Route guard (not logged in → login screen)
 
 Week 2:
-- [ ] My List tab (empty state + list display)
-- [ ] Add product from database (search)
-- [ ] Add custom item (free text)
-- [ ] Auto-categorize items
-- [ ] Check off items
-- [ ] Delete items (swipe left)
-- [ ] Repeat last list
+- [x] My List tab (empty state + list display)
+- [x] Add product from database (search)
+- [x] Add custom item (free text)
+- [x] Auto-categorize items
+- [x] Check off items
+- [x] Delete items (swipe left)
+- [x] Repeat last list (category-grouped modal, per-item checkboxes, selective import, price carry-over)
 
 Week 3:
-- [ ] Live cost estimate (per-store running total as list is built)
-- [ ] Where to shop screen (cheapest store + split trip option)
-- [ ] Price search tab
-- [ ] Product detail with price comparison
+- [x] Live cost estimate (per-store running total as list is built)
+- [x] Where to shop screen (cheapest store + split trip option)
+- [x] Price search tab
+- [x] Product detail with price comparison
 
 Week 4:
 - [ ] Budget setup and home widget
 - [ ] Home screen (active list preview + store grid + budget)
-- [ ] Profile tab
+- [x] Profile tab
 - [ ] Account deletion (App Store required)
-- [ ] Household sharing (invite by email)
+- [x] Household sharing (invite code — owner generates, member joins with 6-char code, Realtime sync)
 
 Week 5:
 - [ ] Receipt upload (camera + photo library)
@@ -796,12 +804,12 @@ DO NOT BUILD (V2+):
 
 ## CURRENT STATUS
 
-Week: 2 — Grocery List (in progress)
+Week: 4 — Profile + Household Sharing (complete)
 Active branch: main
-Last completed: Fintech design system applied to all tab screens (hero+sheet pattern)
-Currently building: Week 2 feature completion
+Last completed: Household sharing with invite codes, Realtime list sync, profile tab
+Currently building: Week 4 remainder (Budget setup, Home screen, Account deletion)
 Known issues: None
-Next action: Continue Week 2 features or start Week 3
+Next action: Budget setup + Home screen, then Account deletion to complete Week 4
 
 ---
 
@@ -832,3 +840,10 @@ Next action: Continue Week 2 features or start Week 3
 | May 2026 | Fintech design system — hero+sheet layout on every screen | Inspired by Robinhood/Cash App/Instacart. Dark green gradient hero, white rounded sheet, #00A651 primary. Applied to all tabs. |
 | May 2026 | Switched from NativeWind to StyleSheet | NativeWind className approach abandoned — all styles now use React Native StyleSheet directly |
 | May 2026 | 5-tab layout: Home, Search, Scan, List, Profile | Center Scan tab is elevated green circle button routing to /receipt/upload |
+| May 2026 | Household sharing via invite code not email | Simpler UX — owner generates 6-char code, member types it in; no email required |
+| May 2026 | Unique constraint on household_members.owner_user_id | One active household per owner; required for upsert onConflict in generateCode flow |
+| May 2026 | listRefreshKey in Zustand for cross-component refresh | Profile bumps key after join/leave; List watches key in useEffect deps to re-fetch |
+| May 2026 | letterSpacing: 0 on all text inputs | Prevents style bleed from code input (letterSpacing: 8) leaking into adjacent inputs |
+| May 2026 | useListStore.getState() in Realtime handlers | Avoids stale closure — always reads current items/setItems without re-subscribing |
+| May 2026 | Clear activeList + items on household leave | Prevents RLS 42501 error — old list pointer becomes unauthorized after membership deleted |
+| May 2026 | "Add from last trip" button with selective import | Replaced blind repeat — modal shows category-grouped items with checkboxes, all pre-checked |

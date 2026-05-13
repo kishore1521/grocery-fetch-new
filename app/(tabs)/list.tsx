@@ -21,6 +21,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { colors } from '../../constants/colors'
 import { useAuthStore } from '../../stores/authStore'
+import { useListStore } from '../../stores/listStore'
 import { useList } from '../../hooks/useList'
 import { supabase } from '../../lib/supabase'
 import {
@@ -89,10 +90,12 @@ const UNIT_OPTIONS = [
 export default function ListScreen() {
   const insets = useSafeAreaInsets()
   const { session, isGuest } = useAuthStore()
+  const listRefreshKey = useListStore(state => state.listRefreshKey)
   const {
     items,
     loading,
     error,
+    isShared,
     toggleChecked,
     updateQuantity,
     updateItem,
@@ -246,10 +249,10 @@ export default function ListScreen() {
   const [budgetInput, setBudgetInput] = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
 
-  // ── Fetch list on mount ───────────────────────────────────────────────────
+  // ── Fetch list on mount + whenever household membership changes ───────────
   useEffect(() => {
     if (!isGuest) fetchActiveList()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [listRefreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch last completed list for repeat feature ──────────────────────────
   useEffect(() => {
@@ -512,9 +515,16 @@ export default function ListScreen() {
             <View style={styles.heroTopRow}>
               <View>
                 <Text style={styles.heroLabel}>GROCERY LIST</Text>
-                <Text style={styles.heroTitle}>
-                  {isShopping ? `In Cart · ${checkedCount} of ${items.length}` : 'My List'}
-                </Text>
+                <View style={styles.heroTitleRow}>
+                  <Text style={styles.heroTitle}>
+                    {isShopping ? `In Cart · ${checkedCount} of ${items.length}` : 'My List'}
+                  </Text>
+                  {isShared && (
+                    <View style={styles.sharedPill}>
+                      <Text style={styles.sharedPillText}>👥 Shared</Text>
+                    </View>
+                  )}
+                </View>
               </View>
               {checkedCount > 0 && (
                 <TouchableOpacity onPress={clearChecked} style={styles.heroClearBtn}>
@@ -1755,6 +1765,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: -0.5,
     lineHeight: 34,
+  },
+  heroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  sharedPill: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+  },
+  sharedPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   heroClearBtn: {
     paddingHorizontal: 12,
@@ -3026,6 +3055,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     height: 48,
+    letterSpacing: 0,
   },
   backBtn: {
     width: 40,
