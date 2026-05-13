@@ -35,7 +35,7 @@ export default function Step1Zip() {
   const handleContinue = () => {
     if (!isComplete) return
     onboardingData.zipCode = zip
-    router.push('/onboarding/step2-stores')
+    router.replace('/onboarding/step2-stores')
   }
 
   const progressWidth = progressAnim.interpolate({
@@ -64,7 +64,7 @@ export default function Step1Zip() {
           <View style={styles.headerRow}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() => router.replace('/onboarding/step1-language')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.backArrow}>←</Text>

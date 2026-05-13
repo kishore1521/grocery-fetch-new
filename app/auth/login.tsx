@@ -19,14 +19,7 @@ import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { onboardingData } from '../../lib/onboardingState'
 import { colors } from '../../constants/colors'
-
-const LANGUAGE_OPTIONS = [
-  { code: 'en', flag: '🇺🇸', label: 'English' },
-  { code: 'ko', flag: '🇰🇷', label: '한국어' },
-  { code: 'es', flag: '🇪🇸', label: 'Español' },
-]
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window')
 
@@ -204,7 +197,7 @@ type Tab = 'signin' | 'signup'
 
 export default function LoginScreen() {
   const { t } = useTranslation()
-  const { setGuest, setLanguage, language } = useAuthStore()
+  const { setGuest } = useAuthStore()
 
   const headline = useMemo(
     () => HEADLINES[Math.floor(Math.random() * HEADLINES.length)],
@@ -219,7 +212,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [selectedLanguage, setSelectedLanguage] = useState(language ?? 'en')
 
   const [firstNameFocused, setFirstNameFocused] = useState(false)
   const [emailFocused, setEmailFocused] = useState(false)
@@ -231,12 +223,6 @@ export default function LoginScreen() {
 
   const emailRef = useRef<TextInput>(null)
   const passwordRef = useRef<TextInput>(null)
-
-  const handleLanguageSelect = (code: string) => {
-    setSelectedLanguage(code)
-    setLanguage(code)
-    onboardingData.language = code
-  }
 
   // Headline entrance animation
   const headlineOpacity = useRef(new Animated.Value(0)).current
@@ -519,30 +505,6 @@ export default function LoginScreen() {
             </View>
             {passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
           </View>
-
-          {/* Language picker — Sign Up only */}
-          {activeTab === 'signup' && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{t('auth.language')}</Text>
-              <View style={styles.langRow}>
-                {LANGUAGE_OPTIONS.map((lang) => {
-                  const isSelected = selectedLanguage === lang.code
-                  return (
-                    <Pressable
-                      key={lang.code}
-                      style={[styles.langPill, isSelected && styles.langPillSelected]}
-                      onPress={() => handleLanguageSelect(lang.code)}
-                    >
-                      <Text style={styles.langPillFlag}>{lang.flag}</Text>
-                      <Text style={[styles.langPillText, isSelected && styles.langPillTextSelected]}>
-                        {lang.label}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
-              </View>
-            </View>
-          )}
 
           {/* General error banner */}
           {error && (
@@ -893,36 +855,4 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 
-  // ── Language picker ──
-  langRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  langPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    height: 40,
-    borderWidth: 1.5,
-    borderColor: '#E2EDE5',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  langPillSelected: {
-    borderColor: '#235347',
-    backgroundColor: '#F4FAF6',
-  },
-  langPillFlag: {
-    fontSize: 14,
-  },
-  langPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8EB69B',
-  },
-  langPillTextSelected: {
-    color: '#235347',
-  },
 })

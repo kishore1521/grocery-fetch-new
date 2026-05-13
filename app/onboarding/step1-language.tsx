@@ -41,7 +41,7 @@ export default function Step1Language() {
 
   const handleContinue = () => {
     onboardingData.language = selected
-    router.push('/onboarding/step1-zip')
+    router.replace('/onboarding/step1-zip')
   }
 
   const progressWidth = progressAnim.interpolate({

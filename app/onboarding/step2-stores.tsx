@@ -137,7 +137,7 @@ export default function Step2Stores() {
     )
     onboardingData.loyaltyShoprite = loyaltyShoprite
     onboardingData.loyaltyStopAndShop = loyaltyStopAndShop
-    router.push('/onboarding/step3-household')
+    router.replace('/onboarding/step3-household')
   }
 
   const progressWidth = progressAnim.interpolate({
@@ -173,7 +173,7 @@ export default function Step2Stores() {
       <View style={styles.headerRow}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/onboarding/step1-zip')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.backArrow}>←</Text>
