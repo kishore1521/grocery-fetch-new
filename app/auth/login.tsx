@@ -18,7 +18,6 @@ import Svg, { Path, Line, Circle, Polygon } from 'react-native-svg'
 import { router } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../stores/authStore'
 import { colors } from '../../constants/colors'
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window')
@@ -197,8 +196,6 @@ type Tab = 'signin' | 'signup'
 
 export default function LoginScreen() {
   const { t } = useTranslation()
-  const { setGuest } = useAuthStore()
-
   const headline = useMemo(
     () => HEADLINES[Math.floor(Math.random() * HEADLINES.length)],
     []
@@ -328,11 +325,6 @@ export default function LoginScreen() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleGuest = () => {
-    setGuest(true)
-    router.replace('/onboarding/step1-language')
   }
 
   const handleSubmit = () => {
@@ -552,14 +544,6 @@ export default function LoginScreen() {
             <Text style={styles.googleText}>{t('auth.continueWithGoogle')}</Text>
           </Pressable>
 
-          {/* Guest link */}
-          <Pressable
-            style={styles.guestLink}
-            onPress={handleGuest}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.guestText}>{t('auth.continueAsGuest')}</Text>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -841,18 +825,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#051F20',
-  },
-
-  // ── Guest link ──
-  guestLink: {
-    marginTop: 20,
-    marginBottom: 8,
-    alignItems: 'center',
-  },
-  guestText: {
-    fontSize: 13,
-    color: '#8EB69B',
-    textDecorationLine: 'underline',
   },
 
 })

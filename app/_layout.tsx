@@ -30,7 +30,7 @@ const checkOnboarding = async (userId: string) => {
 }
 
 export default function RootLayout() {
-  const { session, isLoading, isGuest, setSession, setLoading } = useAuthStore()
+  const { session, isLoading, setSession, setLoading } = useAuthStore()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -51,10 +51,10 @@ export default function RootLayout() {
     if (isLoading) return
     if (session) {
       checkOnboarding(session.user.id)
-    } else if (!isGuest) {
+    } else {
       router.replace('/auth/login')
     }
-  }, [session, isLoading, isGuest])
+  }, [session, isLoading])
 
   if (isLoading) {
     return (
