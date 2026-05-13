@@ -298,6 +298,131 @@ export function useList() {
     }
   }, [removeItem])
 
+  // ─── Complete current trip + start fresh list ────────────────────────────
+
+  const completeTrip = useCallback(async (): Promise<boolean> => {
+    if (!activeList || !session?.user.id) return false
+    try {
+      // Mark current list as completed
+      const { error: completeError } = await supabase
+        .from('grocery_lists')
+        .update({ is_completed: true })
+        .eq('id', activeList.id)
+      if (completeError) throw completeError
+
+      // Create a fresh active list
+      const { data: newList, error: createError } = await supabase
+        .from('grocery_lists')
+        .insert({ user_id: session.user.id, name: 'My List' })
+        .select()
+        .single()
+      if (createError) throw createError
+
+      setActiveList(newList as GroceryList)
+      setItems([])
+      return true
+    } catch (e: unknown) {
+      console.error('[useList] completeTrip error:', e)
+      return false
+    }
+  }, [activeList, session?.user.id, setActiveList, setItems])
+
+  // ─── Fetch last completed list items (for repeat preview) ────────────────
+
+  const fetchLastCompletedItems = useCallback(async (): Promise<{
+    items: { product_id: string | null; custom_item_name: string | null; quantity: number; unit: string | null; notes: string | null; price_at_add: number | null; product_name: string | null; category: string | null }[]
+    date: string
+  } | null> => {
+    if (!session?.user.id) return null
+    try {
+      const { data: lists } = await supabase
+        .from('grocery_lists')
+        .select('id, created_at')
+        .eq('user_id', session.user.id)
+        .eq('is_completed', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (!lists || lists.length === 0) return null
+      const last = lists[0] as { id: string; created_at: string }
+
+      const { data: lastItems } = await supabase
+        .from('grocery_list_items')
+        .select('product_id, custom_item_name, quantity, unit, notes, price_at_add, product:products(name, category)')
+        .eq('list_id', last.id)
+
+      if (!lastItems || lastItems.length === 0) return null
+      return {
+        items: (lastItems as unknown[]).map(raw => {
+          const r = raw as {
+            product_id: string | null
+            custom_item_name: string | null
+            quantity: number
+            unit: string | null
+            notes: string | null
+            price_at_add: number | null
+            product: { name: string; category: string } | null
+          }
+          return {
+            product_id: r.product_id,
+            custom_item_name: r.custom_item_name,
+            quantity: r.quantity,
+            unit: r.unit,
+            notes: r.notes,
+            price_at_add: r.price_at_add,
+            product_name: r.product?.name ?? null,
+            category: r.product?.category ?? null,
+          }
+        }),
+        date: last.created_at,
+      }
+    } catch (e: unknown) {
+      console.error('[useList] fetchLastCompletedItems error:', e)
+      return null
+    }
+  }, [session?.user.id])
+
+  // ─── Repeat last list — bulk insert into active list ─────────────────────
+
+  const repeatLastList = useCallback(async (
+    sourceItems: { product_id: string | null; custom_item_name: string | null; quantity: number; unit: string | null; notes: string | null; price_at_add?: number | null; product_name?: string | null; category?: string | null }[]
+  ): Promise<number> => {
+    if (!activeList) return 0
+
+    // Deduplicate: skip product_id already in current list
+    const existingProductIds = new Set(items.filter(i => i.product_id).map(i => i.product_id!))
+    const toInsert = sourceItems.filter(
+      i => !i.product_id || !existingProductIds.has(i.product_id)
+    )
+    if (toInsert.length === 0) return 0
+
+    const rows = toInsert.map(i => ({
+      list_id: activeList.id,
+      product_id: i.product_id ?? null,
+      custom_item_name: i.custom_item_name ?? null,
+      quantity: i.quantity,
+      unit: i.unit ?? null,
+      notes: i.notes ?? null,
+      price_at_add: i.price_at_add ?? null,
+      is_checked: false,
+    }))
+
+    try {
+      const { data, error } = await supabase
+        .from('grocery_list_items')
+        .insert(rows)
+        .select(`*, product:products(id, name, brand, category, unit, concept, variant_type, size_label, image_url, upc, description)`)
+      if (error) throw error
+      if (data) {
+        for (const item of data) addItem(item as GroceryListItem)
+      }
+      return toInsert.length
+    } catch (e: unknown) {
+      console.error('[useList] repeatLastList error:', e)
+      return 0
+    }
+  }, [activeList, items, addItem])
+
   // ─── Clear checked items ──────────────────────────────────────────────────
 
   const clearChecked = useCallback(async () => {
@@ -335,5 +460,8 @@ export function useList() {
     updateItem,
     deleteItem,
     clearChecked,
+    completeTrip,
+    fetchLastCompletedItems,
+    repeatLastList,
   }
 }

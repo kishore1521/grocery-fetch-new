@@ -777,6 +777,13 @@ DO NOT BUILD (V2+):
 
 ---
 
+## GIT RULES — MANDATORY
+
+- NEVER run `git add`, `git commit`, or `git push` unless the user explicitly says "push to git" or "commit this"
+- Do not stage, commit, or push after completing a feature — wait to be asked
+
+---
+
 ## WHAT TO DO AT THE START OF EVERY CLAUDE CODE SESSION
 
 1. Tell Claude Code: "Read CLAUDE.md before doing anything"

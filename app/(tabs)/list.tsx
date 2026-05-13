@@ -101,6 +101,9 @@ export default function ListScreen() {
     fetchActiveList,
     addCustomItemFull,
     addProductToListById,
+    completeTrip,
+    fetchLastCompletedItems,
+    repeatLastList,
   } = useList()
 
   // ── Input / search state ──────────────────────────────────────────────────
@@ -148,6 +151,62 @@ export default function ListScreen() {
     setEditingItem(null)
   }
 
+  // ── Repeat last list state ────────────────────────────────────────────────
+  const [lastListItems, setLastListItems] = useState<{
+    product_id: string | null
+    custom_item_name: string | null
+    quantity: number
+    unit: string | null
+    notes: string | null
+    price_at_add: number | null
+    product_name: string | null
+    category: string | null
+  }[]>([])
+  const [lastListDate, setLastListDate] = useState<string | null>(null)
+  const [repeatModalVisible, setRepeatModalVisible] = useState(false)
+  const [repeatChecked, setRepeatChecked] = useState<Set<number>>(new Set())
+  const [repeating, setRepeating] = useState(false)
+  const [completingTrip, setCompletingTrip] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastAnim = useRef(new Animated.Value(0)).current
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2200),
+      Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setToastMessage(null))
+  }
+
+  const openRepeatModal = () => {
+    // Pre-check all items
+    setRepeatChecked(new Set(lastListItems.map((_, i) => i)))
+    setRepeatModalVisible(true)
+  }
+
+  const handleRepeat = async () => {
+    const selected = lastListItems.filter((_, i) => repeatChecked.has(i))
+    if (selected.length === 0) return
+    setRepeating(true)
+    const count = await repeatLastList(selected)
+    setRepeating(false)
+    setRepeatModalVisible(false)
+    if (count > 0) showToast(`${count} item${count !== 1 ? 's' : ''} added from your last trip`)
+  }
+
+  const handleCompleteTrip = async () => {
+    setCompletingTrip(true)
+    const ok = await completeTrip()
+    setCompletingTrip(false)
+    if (ok) {
+      // Refresh last completed items so repeat works immediately next session
+      const result = await fetchLastCompletedItems()
+      if (result) { setLastListItems(result.items); setLastListDate(result.date) }
+      showToast('Trip complete! Starting a fresh list.')
+    }
+  }
+
   // ── Checkbox animations ───────────────────────────────────────────────────
   const checkAnimations = useRef<Record<string, Animated.Value>>({})
 
@@ -190,6 +249,17 @@ export default function ListScreen() {
   // ── Fetch list on mount ───────────────────────────────────────────────────
   useEffect(() => {
     if (!isGuest) fetchActiveList()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch last completed list for repeat feature ──────────────────────────
+  useEffect(() => {
+    if (isGuest) return
+    fetchLastCompletedItems().then(result => {
+      if (result) {
+        setLastListItems(result.items)
+        setLastListDate(result.date)
+      }
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch budget on mount ─────────────────────────────────────────────────
@@ -243,14 +313,17 @@ export default function ListScreen() {
         setSearchResults(results)
         if (results.length > 0) {
           const firstConcept = results[0].concept
-          const firstSizeKey = results[0].sizes[0]?.key
+          const firstSize = results[0].sizes[0]
           setExpandedConcepts(new Set([firstConcept]))
-          if (firstSizeKey) {
-            setExpandedSizes(new Set([firstConcept + '||' + firstSizeKey]))
+          if (firstSize) {
+            setExpandedSizes(new Set([firstConcept + '||' + firstSize.key]))
+            const best = firstSize.store_options.find(o => o.is_best) ?? firstSize.store_options[0] ?? null
+            setSelectedOption(best)
           }
         } else {
           setExpandedConcepts(new Set())
           setExpandedSizes(new Set())
+          setSelectedOption(null)
         }
       } catch (e) {
         console.error('search error:', e)
@@ -550,21 +623,36 @@ export default function ListScreen() {
         {/* Completion banner */}
         {allChecked && (
           <View style={styles.completionBanner}>
-            <View style={styles.completionLeft}>
+            {/* Top row: icon + text */}
+            <View style={styles.completionTop}>
               <View style={styles.completionCheck}>
                 <Text style={styles.completionCheckText}>✓</Text>
               </View>
-              <View>
+              <View style={styles.completionTextCol}>
                 <Text style={styles.completionTitle}>All done! 🎉</Text>
-                <Text style={styles.completionSub}>Scan your receipt to track savings</Text>
+                <Text style={styles.completionSub}>Mark this trip complete to start fresh</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.completionBtn}
-              onPress={() => router.push('/receipt/upload')}
-            >
-              <Text style={styles.completionBtnText}>Scan →</Text>
-            </TouchableOpacity>
+            {/* Action buttons */}
+            <View style={styles.completionActions}>
+              <TouchableOpacity
+                style={[styles.completionDoneBtn, completingTrip && { opacity: 0.6 }]}
+                onPress={handleCompleteTrip}
+                disabled={completingTrip}
+                activeOpacity={0.85}
+              >
+                {completingTrip
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <Text style={styles.completionDoneBtnText}>Done shopping</Text>
+                }
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.completionScanBtn}
+                onPress={() => router.push('/receipt/upload')}
+              >
+                <Text style={styles.completionScanBtnText}>Scan receipt</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -738,6 +826,20 @@ export default function ListScreen() {
               <Text style={styles.emptySub}>
                 Tap "Add item" below to start building your list
               </Text>
+              {lastListItems.length > 0 && (
+                <TouchableOpacity
+                  style={styles.repeatBtn}
+                  onPress={openRepeatModal}
+                  activeOpacity={0.8}
+                >
+                  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none"
+                    stroke={colors.primary} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M1 4v6h6M23 20v-6h-6" />
+                    <Path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" />
+                  </Svg>
+                  <Text style={styles.repeatBtnText}>Add from last trip</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -788,13 +890,15 @@ export default function ListScreen() {
                           setSelectedOption(null)
                         } else {
                           setExpandedConcepts(new Set([group.concept]))
-                          const firstSizeKey = group.sizes[0]?.key
-                          setExpandedSizes(
-                            firstSizeKey
-                              ? new Set([group.concept + '||' + firstSizeKey])
-                              : new Set()
-                          )
-                          setSelectedOption(null)
+                          const firstSize = group.sizes[0]
+                          if (firstSize) {
+                            setExpandedSizes(new Set([group.concept + '||' + firstSize.key]))
+                            const best = firstSize.store_options.find(o => o.is_best) ?? firstSize.store_options[0] ?? null
+                            setSelectedOption(best)
+                          } else {
+                            setExpandedSizes(new Set())
+                            setSelectedOption(null)
+                          }
                         }
                       }}
                       activeOpacity={0.7}
@@ -849,10 +953,14 @@ export default function ListScreen() {
                                 key={size.key}
                                 style={[styles.sizeChip, isActive && styles.sizeChipActive]}
                                 onPress={() => {
-                                  setExpandedSizes(prev =>
-                                    prev.has(k) ? new Set() : new Set([k])
-                                  )
-                                  setSelectedOption(null)
+                                  if (expandedSizes.has(k)) {
+                                    setExpandedSizes(new Set())
+                                    setSelectedOption(null)
+                                  } else {
+                                    setExpandedSizes(new Set([k]))
+                                    const best = size.store_options.find(o => o.is_best) ?? size.store_options[0] ?? null
+                                    setSelectedOption(best)
+                                  }
                                 }}
                                 activeOpacity={0.75}
                               >
@@ -1433,6 +1541,158 @@ export default function ListScreen() {
         </SafeAreaView>
       </Modal>
 
+      {/* ── REPEAT LAST LIST MODAL ── */}
+      <Modal
+        visible={repeatModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setRepeatModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setRepeatModalVisible(false)}
+              style={styles.modalCancelBtn}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Last Trip</Text>
+            <TouchableOpacity
+              style={styles.repeatSelectAllBtn}
+              onPress={() => {
+                if (repeatChecked.size === lastListItems.length) {
+                  setRepeatChecked(new Set())
+                } else {
+                  setRepeatChecked(new Set(lastListItems.map((_, i) => i)))
+                }
+              }}
+            >
+              <Text style={styles.repeatSelectAllText}>
+                {repeatChecked.size === lastListItems.length ? 'Deselect all' : 'Select all'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Date + count */}
+          <View style={styles.repeatModalMeta}>
+            <Text style={styles.repeatModalDate}>
+              {lastListDate
+                ? new Date(lastListDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+                : 'Last trip'}
+            </Text>
+            <View style={styles.repeatModalCountBadge}>
+              <Text style={styles.repeatModalCountText}>
+                {repeatChecked.size} of {lastListItems.length} selected
+              </Text>
+            </View>
+          </View>
+
+          {/* Item list grouped by category */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.repeatItemList}
+            showsVerticalScrollIndicator={false}
+          >
+            {(() => {
+              // Group by category
+              const grouped: Record<string, { item: typeof lastListItems[0]; idx: number }[]> = {}
+              lastListItems.forEach((item, idx) => {
+                const cat = item.category || 'other'
+                if (!grouped[cat]) grouped[cat] = []
+                grouped[cat].push({ item, idx })
+              })
+              return CATEGORY_ORDER
+                .filter(cat => grouped[cat]?.length > 0)
+                .map(cat => (
+                  <View key={cat}>
+                    <View style={styles.repeatCategoryHeader}>
+                      <View style={[styles.sectionDot, { backgroundColor: CATEGORY_COLORS[cat] || colors.textTertiary }]} />
+                      <Text style={styles.sectionTitle}>{cat.toUpperCase()}</Text>
+                    </View>
+                    {grouped[cat].map(({ item, idx }) => {
+                      const checked = repeatChecked.has(idx)
+                      const name = item.custom_item_name || item.product_name || 'Item'
+                      const accentColor = CATEGORY_COLORS[cat] || colors.textTertiary
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[styles.repeatItemRow, !checked && styles.repeatItemRowUnchecked]}
+                          onPress={() => {
+                            const next = new Set(repeatChecked)
+                            if (next.has(idx)) next.delete(idx)
+                            else next.add(idx)
+                            setRepeatChecked(next)
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          {/* Accent bar */}
+                          <View style={[styles.itemAccent, { backgroundColor: checked ? accentColor : colors.border }]} />
+
+                          {/* Checkbox */}
+                          <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                            {checked && (
+                              <Svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+                                <Path d="M2 6l3 3 5-5" stroke="#FFFFFF" strokeWidth={2}
+                                  strokeLinecap="round" strokeLinejoin="round" />
+                              </Svg>
+                            )}
+                          </View>
+
+                          {/* Name + detail */}
+                          <View style={styles.itemContent}>
+                            <Text style={[styles.itemName, !checked && styles.repeatItemNameUnchecked]}
+                              numberOfLines={1}>
+                              {name}
+                            </Text>
+                            {item.unit ? (
+                              <Text style={styles.itemSub} numberOfLines={1}>{item.unit}</Text>
+                            ) : null}
+                          </View>
+
+                          {/* Qty badge */}
+                          {item.quantity > 1 && (
+                            <View style={styles.repeatQtyBadge}>
+                              <Text style={styles.repeatQtyBadgeText}>×{item.quantity}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                ))
+            })()}
+          </ScrollView>
+
+          {/* Add button */}
+          <View style={styles.repeatAddWrap}>
+            <TouchableOpacity
+              style={[styles.repeatAddBtn, (repeating || repeatChecked.size === 0) && { opacity: 0.5 }]}
+              onPress={handleRepeat}
+              disabled={repeating || repeatChecked.size === 0}
+              activeOpacity={0.85}
+            >
+              {repeating
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <Text style={styles.repeatAddBtnText}>
+                    Add {repeatChecked.size} item{repeatChecked.size !== 1 ? 's' : ''} to my list
+                  </Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── TOAST ── */}
+      {toastMessage && (
+        <Animated.View style={[styles.toast, { opacity: toastAnim }]}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+            stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round">
+            <Path d="M20 6L9 17l-5-5" />
+          </Svg>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
+
     </View>
   )
 }
@@ -1641,28 +1901,29 @@ const styles = StyleSheet.create({
 
   // ── Completion banner ─────────────────────────────────────────────────────
   completionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.primaryLight,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 4,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#BBF7D0',
+    gap: 14,
   },
-  completionLeft: {
+  completionTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  completionTextCol: {
     flex: 1,
+    gap: 2,
   },
   completionCheck: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1673,25 +1934,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   completionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   completionSub: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 1,
   },
-  completionBtn: {
+  completionActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  completionDoneBtn: {
+    flex: 1,
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  completionBtnText: {
-    fontSize: 13,
+  completionDoneBtnText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  completionScanBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.primaryBorder,
+  },
+  completionScanBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
 
   // ── List ──────────────────────────────────────────────────────────────────
@@ -1954,6 +2232,146 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
+  },
+  repeatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primaryBorder,
+    backgroundColor: colors.primaryLight,
+  },
+  repeatBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // ── Repeat modal ──────────────────────────────────────────────────────────
+  repeatSelectAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  repeatSelectAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  repeatModalMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  repeatModalDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  repeatModalCountBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+  },
+  repeatModalCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  repeatCategoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  repeatItemList: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 24,
+  },
+  repeatItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginBottom: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 52,
+    gap: 0,
+  },
+  repeatItemRowUnchecked: {
+    opacity: 0.5,
+  },
+  repeatItemNameUnchecked: {
+    color: colors.textTertiary,
+    textDecorationLine: 'line-through' as const,
+  },
+  repeatQtyBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginRight: 10,
+  },
+  repeatQtyBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  repeatAddWrap: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  repeatAddBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  repeatAddBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  toast: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.textPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  toastText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 
   // Skeleton
