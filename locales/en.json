@@ -176,6 +176,16 @@
     "repeatAddBtn_one": "Add {{count}} item to my list",
     "repeatAddBtn_other": "Add {{count}} items to my list"
   },
+  "budgetCard": {
+    "budget": "BUDGET",
+    "planned": "PLANNED",
+    "spent": "SPENT",
+    "remaining": "REMAINING",
+    "onTrack": "On track · ${{amount}} left to allocate",
+    "gettingClose": "⚠️ Getting close · ${{amount}} left",
+    "overBudget": "🔴 ${{amount}} over budget",
+    "noBudget": "No budget set · tap Budget to add"
+  },
   "household": {
     "sectionLabel": "HOUSEHOLD",
     "activeTitle": "Household active",

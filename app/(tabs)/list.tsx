@@ -448,10 +448,10 @@ export default function ListScreen() {
   const v2Remaining = budget ? budget - v2TotalCommitted : 0
   const v2IsOver = budget ? v2TotalCommitted > budget : false
   const v2StatusText = () => {
-    if (!budget) return 'No budget set · tap Budget to add'
-    if (v2IsOver) return `🔴 $${Math.abs(v2Remaining).toFixed(2)} over budget`
-    if (budget > 0 && v2Remaining / budget < 0.2) return `⚠️ Getting close · $${v2Remaining.toFixed(2)} left`
-    return `On track · $${v2Remaining.toFixed(2)} left to allocate`
+    if (!budget) return t('budgetCard.noBudget')
+    if (v2IsOver) return t('budgetCard.overBudget', { amount: Math.abs(v2Remaining).toFixed(2) })
+    if (budget > 0 && v2Remaining / budget < 0.2) return t('budgetCard.gettingClose', { amount: v2Remaining.toFixed(2) })
+    return t('budgetCard.onTrack', { amount: v2Remaining.toFixed(2) })
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -574,7 +574,7 @@ export default function ListScreen() {
                   onPress={() => { setBudgetInput(budget ? budget.toFixed(0) : ''); setBudgetModalVisible(true) }}
                   activeOpacity={0.75}
                 >
-                  <Text style={styles.v2StatLabel}>BUDGET</Text>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.budget')}</Text>
                   <Text style={[styles.v2StatValue, !budget && styles.v2StatValueDim]}>
                     {budget ? `$${budget.toFixed(0)}` : '—'}
                   </Text>
@@ -592,7 +592,7 @@ export default function ListScreen() {
 
                 {/* Planned */}
                 <View style={styles.v2StatCol}>
-                  <Text style={styles.v2StatLabel}>PLANNED</Text>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.planned')}</Text>
                   <Text style={styles.v2StatValue}>
                     {estimatedCost > 0 ? `$${estimatedCost.toFixed(2)}` : '$—'}
                   </Text>
@@ -602,7 +602,7 @@ export default function ListScreen() {
 
                 {/* Spent */}
                 <View style={styles.v2StatCol}>
-                  <Text style={styles.v2StatLabel}>SPENT</Text>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.spent')}</Text>
                   <Text style={[styles.v2StatValue, inCartCost > 0 && styles.v2StatValueGreen]}>
                     {inCartCost > 0 ? `$${inCartCost.toFixed(2)}` : '$—'}
                   </Text>
@@ -612,7 +612,7 @@ export default function ListScreen() {
 
                 {/* Remaining */}
                 <View style={styles.v2StatCol}>
-                  <Text style={styles.v2StatLabel}>REMAINING</Text>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.remaining')}</Text>
                   <Text style={[styles.v2StatValue, v2IsOver && styles.v2StatValueRed]}>
                     {budget
                       ? (v2IsOver
