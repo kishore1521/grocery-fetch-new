@@ -19,6 +19,7 @@ import Svg, { Path, Circle, Line } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { colors } from '../../constants/colors'
 import { useAuthStore } from '../../stores/authStore'
 import { useListStore } from '../../stores/listStore'
@@ -88,6 +89,7 @@ const UNIT_OPTIONS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ListScreen() {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { session, isGuest } = useAuthStore()
   const listRefreshKey = useListStore(state => state.listRefreshKey)
@@ -195,7 +197,7 @@ export default function ListScreen() {
     const count = await repeatLastList(selected)
     setRepeating(false)
     setRepeatModalVisible(false)
-    if (count > 0) showToast(`${count} item${count !== 1 ? 's' : ''} added from your last trip`)
+    if (count > 0) showToast(t('list.toastItemsAdded', { count }))
   }
 
   const handleCompleteTrip = async () => {
@@ -206,7 +208,7 @@ export default function ListScreen() {
       // Refresh last completed items so repeat works immediately next session
       const result = await fetchLastCompletedItems()
       if (result) { setLastListItems(result.items); setLastListDate(result.date) }
-      showToast('Trip complete! Starting a fresh list.')
+      showToast(t('list.toastTripComplete'))
     }
   }
 
@@ -441,7 +443,7 @@ export default function ListScreen() {
         >
           <SafeAreaView edges={['top']}>
             <View style={styles.heroInner}>
-              <Text style={styles.heroTitle}>My List</Text>
+              <Text style={styles.heroTitle}>{t('list.heroTitle')}</Text>
             </View>
           </SafeAreaView>
         </LinearGradient>
@@ -476,15 +478,15 @@ export default function ListScreen() {
         >
           <SafeAreaView edges={['top']}>
             <View style={styles.heroInner}>
-              <Text style={styles.heroTitle}>My List</Text>
+              <Text style={styles.heroTitle}>{t('list.heroTitle')}</Text>
             </View>
           </SafeAreaView>
         </LinearGradient>
         <View style={styles.sheetContainer}>
           <TouchableOpacity style={styles.errorState} onPress={fetchActiveList} activeOpacity={0.7}>
             <Text style={styles.errorIcon}>⚠️</Text>
-            <Text style={styles.errorTitle}>Couldn't load your list</Text>
-            <Text style={styles.errorSub}>Tap to try again</Text>
+            <Text style={styles.errorTitle}>{t('list.couldntLoad')}</Text>
+            <Text style={styles.errorSub}>{t('list.tapToRetry')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -514,10 +516,10 @@ export default function ListScreen() {
             {/* ── Top row: label + clear button ── */}
             <View style={styles.heroTopRow}>
               <View>
-                <Text style={styles.heroLabel}>GROCERY LIST</Text>
+                <Text style={styles.heroLabel}>{t('list.heroLabel')}</Text>
                 <View style={styles.heroTitleRow}>
                   <Text style={styles.heroTitle}>
-                    {isShopping ? `In Cart · ${checkedCount} of ${items.length}` : 'My List'}
+                    {isShopping ? t('list.inCart', { checked: checkedCount, total: items.length }) : t('list.heroTitle')}
                   </Text>
                   {isShared && (
                     <View style={styles.sharedPill}>
@@ -528,7 +530,7 @@ export default function ListScreen() {
               </View>
               {checkedCount > 0 && (
                 <TouchableOpacity onPress={clearChecked} style={styles.heroClearBtn}>
-                  <Text style={styles.heroClearText}>Clear done</Text>
+                  <Text style={styles.heroClearText}>{t('list.clearDone')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -540,7 +542,7 @@ export default function ListScreen() {
               <Animated.View style={[styles.summaryAmountRow, { opacity: fadeAnim }]}>
                 <View style={styles.summaryAmountLeft}>
                   <Text style={styles.summaryAmountLabel}>
-                    {isShopping ? 'SPENT SO FAR' : 'ESTIMATED COST'}
+                    {isShopping ? t('list.spentSoFar') : t('list.estimatedCost')}
                   </Text>
                   <Text style={[styles.summaryAmount, isOverBudget && styles.summaryAmountOver]}>
                     {activeAmount > 0
@@ -560,17 +562,17 @@ export default function ListScreen() {
                 <View style={styles.summaryPills}>
                   <View style={styles.summaryPill}>
                     <Text style={styles.summaryPillValue}>{items.length}</Text>
-                    <Text style={styles.summaryPillLabel}>items</Text>
+                    <Text style={styles.summaryPillLabel}>{t('list.items')}</Text>
                   </View>
                   {checkedCount > 0 && (
                     <View style={[styles.summaryPill, styles.summaryPillGreen]}>
                       <Text style={[styles.summaryPillValue, styles.summaryPillValueGreen]}>{checkedCount}</Text>
-                      <Text style={[styles.summaryPillLabel, styles.summaryPillLabelGreen]}>done</Text>
+                      <Text style={[styles.summaryPillLabel, styles.summaryPillLabelGreen]}>{t('list.done')}</Text>
                     </View>
                   )}
                   <View style={styles.summaryPill}>
                     <Text style={styles.summaryPillValue}>{pricedCount}/{items.length}</Text>
-                    <Text style={styles.summaryPillLabel}>priced</Text>
+                    <Text style={styles.summaryPillLabel}>{t('list.priced')}</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -608,7 +610,7 @@ export default function ListScreen() {
                       </Text>
                     </>
                   ) : (
-                    <Text style={styles.summaryBudgetCta}>Set a budget for this trip</Text>
+                    <Text style={styles.summaryBudgetCta}>{t('list.setBudgetCta')}</Text>
                   )}
                 </View>
                 <View style={styles.summaryEditBtn}>
@@ -639,8 +641,8 @@ export default function ListScreen() {
                 <Text style={styles.completionCheckText}>✓</Text>
               </View>
               <View style={styles.completionTextCol}>
-                <Text style={styles.completionTitle}>All done! 🎉</Text>
-                <Text style={styles.completionSub}>Mark this trip complete to start fresh</Text>
+                <Text style={styles.completionTitle}>{t('list.allDone')}</Text>
+                <Text style={styles.completionSub}>{t('list.allDoneSub')}</Text>
               </View>
             </View>
             {/* Action buttons */}
@@ -653,14 +655,14 @@ export default function ListScreen() {
               >
                 {completingTrip
                   ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={styles.completionDoneBtnText}>Done shopping</Text>
+                  : <Text style={styles.completionDoneBtnText}>{t('list.doneShopping')}</Text>
                 }
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.completionScanBtn}
                 onPress={() => router.push('/receipt/upload')}
               >
-                <Text style={styles.completionScanBtnText}>Scan receipt</Text>
+                <Text style={styles.completionScanBtnText}>{t('list.scanReceipt')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -690,10 +692,10 @@ export default function ListScreen() {
                     </Svg>
                   </View>
                   <View style={styles.whereToShopText}>
-                    <Text style={styles.whereToShopLabel}>PRICE COMPARISON</Text>
-                    <Text style={styles.whereToShopTitle}>Where to Shop</Text>
+                    <Text style={styles.whereToShopLabel}>{t('list.priceComparison')}</Text>
+                    <Text style={styles.whereToShopTitle}>{t('list.whereToShop')}</Text>
                     <Text style={styles.whereToShopSub}>
-                      {pricedCount} items · tap to compare all stores
+                      {t('list.whereToShopSub', { count: pricedCount })}
                     </Text>
                   </View>
                 </View>
@@ -832,10 +834,8 @@ export default function ListScreen() {
               <View style={styles.emptyIconWrap}>
                 <Text style={styles.emptyIcon}>🛒</Text>
               </View>
-              <Text style={styles.emptyTitle}>Your list is empty</Text>
-              <Text style={styles.emptySub}>
-                Tap "Add item" below to start building your list
-              </Text>
+              <Text style={styles.emptyTitle}>{t('list.emptyTitle')}</Text>
+              <Text style={styles.emptySub}>{t('list.emptySub')}</Text>
               {lastListItems.length > 0 && (
                 <TouchableOpacity
                   style={styles.repeatBtn}
@@ -847,7 +847,7 @@ export default function ListScreen() {
                     <Path d="M1 4v6h6M23 20v-6h-6" />
                     <Path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" />
                   </Svg>
-                  <Text style={styles.repeatBtnText}>Add from last trip</Text>
+                  <Text style={styles.repeatBtnText}>{t('list.addFromLastTrip')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1061,7 +1061,7 @@ export default function ListScreen() {
 
                                       {/* Brand */}
                                       <Text style={styles.cardBrand} numberOfLines={1}>
-                                        {opt.store_brand_name || opt.brand || 'Store brand'}
+                                        {opt.store_brand_name || opt.brand || t('list.storeBrand')}
                                       </Text>
 
                                       {/* Store chip */}
@@ -1117,12 +1117,12 @@ export default function ListScreen() {
                                     }}
                                   >
                                     <Text style={styles.addToListBtnText}>
-                                      + Add {selectedOption.store_chain} ${selectedOption.effective_price.toFixed(2)} to list
+                                      {t('list.addStoreToList', { store: selectedOption.store_chain, price: selectedOption.effective_price.toFixed(2) })}
                                     </Text>
                                   </TouchableOpacity>
                                 ) : (
                                   <Text style={styles.addToListHint}>
-                                    Tap a card to select, then add to list
+                                    {t('list.tapToSelect')}
                                   </Text>
                                 )}
                               </View>
@@ -1150,9 +1150,7 @@ export default function ListScreen() {
                   </Svg>
                 </View>
                 <Text style={styles.noResultsTitle}>"{inputText.trim()}"</Text>
-                <Text style={styles.noResultsSub}>
-                  We're not tracking prices for this item yet.{'\n'}You can still add it to your list.
-                </Text>
+                <Text style={styles.noResultsSub}>{t('list.notTracking')}</Text>
                 <TouchableOpacity
                   style={styles.addCustomTrigger}
                   onPress={() => {
@@ -1163,7 +1161,7 @@ export default function ListScreen() {
                     setShowingMiniForm(true)
                   }}
                 >
-                  <Text style={styles.addCustomTriggerText}>Add to my list</Text>
+                  <Text style={styles.addCustomTriggerText}>{t('list.addToMyList')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1183,7 +1181,7 @@ export default function ListScreen() {
                 <View style={styles.miniCard}>
                   {/* Qty row */}
                   <View style={styles.miniCardRow}>
-                    <Text style={styles.miniCardLabel}>Quantity</Text>
+                    <Text style={styles.miniCardLabel}>{t('list.quantity')}</Text>
                     <View style={styles.miniQtyStepper}>
                       <TouchableOpacity
                         style={styles.miniStepBtn}
@@ -1207,7 +1205,7 @@ export default function ListScreen() {
 
                   {/* Unit chips */}
                   <View style={styles.miniCardRow}>
-                    <Text style={styles.miniCardLabel}>Unit</Text>
+                    <Text style={styles.miniCardLabel}>{t('list.unit')}</Text>
                   </View>
                   <ScrollView
                     horizontal
@@ -1232,10 +1230,10 @@ export default function ListScreen() {
 
                 {/* Note input card */}
                 <View style={styles.miniNoteCard}>
-                  <Text style={styles.miniCardLabel}>Note</Text>
+                  <Text style={styles.miniCardLabel}>{t('list.note')}</Text>
                   <TextInput
                     style={styles.miniNote}
-                    placeholder="e.g. organic, low-fat, family size…"
+                    placeholder={t('list.notePlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     value={miniFormNote}
                     onChangeText={setMiniFormNote}
@@ -1261,7 +1259,7 @@ export default function ListScreen() {
                 }}
               >
                 <Text style={styles.manualHintText}>
-                  + Add "{inputText.trim()}" to my list
+                  {t('list.addManual', { name: inputText.trim() })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1288,7 +1286,9 @@ export default function ListScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={styles.miniPinnedBtnText}>
-                  Add {miniFormQty > 1 ? `${miniFormQty}× ` : ''}"{inputText.trim()}" to my list
+                  {miniFormQty > 1
+                    ? t('list.addToListMulti', { qty: miniFormQty, name: inputText.trim() })
+                    : t('list.addToListSingle', { name: inputText.trim() })}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1305,7 +1305,7 @@ export default function ListScreen() {
               <TextInput
                 ref={inputRef}
                 style={styles.input}
-                placeholder="Add item to your list..."
+                placeholder={t('list.addItemPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={inputText}
                 onChangeText={setInputText}
@@ -1367,9 +1367,9 @@ export default function ListScreen() {
               onPress={() => setBudgetModalVisible(false)}
               style={styles.modalCancelBtn}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Monthly Budget</Text>
+            <Text style={styles.modalTitle}>{t('list.monthlyBudget')}</Text>
             <TouchableOpacity
               onPress={saveBudget}
               style={[styles.modalSaveBtn, savingBudget && styles.modalSaveBtnDisabled]}
@@ -1377,7 +1377,7 @@ export default function ListScreen() {
             >
               {savingBudget
                 ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.modalSaveText}>Save</Text>
+                : <Text style={styles.modalSaveText}>{t('common.save')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -1389,7 +1389,7 @@ export default function ListScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.modalAmountSection}>
-              <Text style={styles.modalAmountLabel}>SET BUDGET</Text>
+              <Text style={styles.modalAmountLabel}>{t('list.setBudgetLabel')}</Text>
               <View style={styles.modalAmountRow}>
                 <Text style={styles.modalDollarSign}>$</Text>
                 <TextInput
@@ -1407,7 +1407,7 @@ export default function ListScreen() {
             </View>
 
             <View style={styles.modalPresetsSection}>
-              <Text style={styles.modalPresetsLabel}>QUICK SELECT</Text>
+              <Text style={styles.modalPresetsLabel}>{t('list.quickSelect')}</Text>
               <View style={styles.modalPresetsRow}>
                 {BUDGET_PRESETS.map(amount => (
                   <TouchableOpacity
@@ -1432,16 +1432,16 @@ export default function ListScreen() {
 
             {(spentSoFar > 0 || tripCount > 0) && (
               <View style={styles.modalSummaryCard}>
-                <Text style={styles.modalSummaryTitle}>THIS MONTH SO FAR</Text>
+                <Text style={styles.modalSummaryTitle}>{t('list.thisMonthSoFar')}</Text>
                 <View style={styles.modalSummaryRow}>
                   <View style={styles.modalSummaryStat}>
                     <Text style={styles.modalSummaryValue}>${spentSoFar.toFixed(2)}</Text>
-                    <Text style={styles.modalSummaryLabel}>spent</Text>
+                    <Text style={styles.modalSummaryLabel}>{t('list.spent')}</Text>
                   </View>
                   <View style={styles.modalSummaryDivider} />
                   <View style={styles.modalSummaryStat}>
                     <Text style={styles.modalSummaryValue}>{tripCount}</Text>
-                    <Text style={styles.modalSummaryLabel}>trip{tripCount !== 1 ? 's' : ''}</Text>
+                    <Text style={styles.modalSummaryLabel}>{t('list.trips', { count: tripCount })}</Text>
                   </View>
                 </View>
               </View>
@@ -1463,14 +1463,14 @@ export default function ListScreen() {
               onPress={() => setEditingItem(null)}
               style={styles.modalCancelBtn}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Item</Text>
+            <Text style={styles.modalTitle}>{t('list.editItem')}</Text>
             <TouchableOpacity
               onPress={saveEditModal}
               style={styles.modalSaveBtn}
             >
-              <Text style={styles.modalSaveText}>Save</Text>
+              <Text style={styles.modalSaveText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -1489,7 +1489,7 @@ export default function ListScreen() {
             {/* Qty + Unit card */}
             <View style={styles.miniCard}>
               <View style={styles.miniCardRow}>
-                <Text style={styles.miniCardLabel}>Quantity</Text>
+                <Text style={styles.miniCardLabel}>{t('list.quantity')}</Text>
                 <View style={styles.miniQtyStepper}>
                   <TouchableOpacity
                     style={styles.miniStepBtn}
@@ -1512,7 +1512,7 @@ export default function ListScreen() {
               <View style={styles.miniCardDivider} />
 
               <View style={styles.miniCardRow}>
-                <Text style={styles.miniCardLabel}>Unit</Text>
+                <Text style={styles.miniCardLabel}>{t('list.unit')}</Text>
               </View>
               <ScrollView
                 horizontal
@@ -1537,10 +1537,10 @@ export default function ListScreen() {
 
             {/* Note input card */}
             <View style={styles.miniNoteCard}>
-              <Text style={styles.miniCardLabel}>Note</Text>
+              <Text style={styles.miniCardLabel}>{t('list.note')}</Text>
               <TextInput
                 style={styles.miniNote}
-                placeholder="e.g. organic, low-fat, family size…"
+                placeholder={t('list.notePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={editNote}
                 onChangeText={setEditNote}
@@ -1564,9 +1564,9 @@ export default function ListScreen() {
               onPress={() => setRepeatModalVisible(false)}
               style={styles.modalCancelBtn}
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Last Trip</Text>
+            <Text style={styles.modalTitle}>{t('list.lastTrip')}</Text>
             <TouchableOpacity
               style={styles.repeatSelectAllBtn}
               onPress={() => {
@@ -1578,7 +1578,7 @@ export default function ListScreen() {
               }}
             >
               <Text style={styles.repeatSelectAllText}>
-                {repeatChecked.size === lastListItems.length ? 'Deselect all' : 'Select all'}
+                {repeatChecked.size === lastListItems.length ? t('list.deselectAll') : t('list.selectAll')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1592,7 +1592,7 @@ export default function ListScreen() {
             </Text>
             <View style={styles.repeatModalCountBadge}>
               <Text style={styles.repeatModalCountText}>
-                {repeatChecked.size} of {lastListItems.length} selected
+                {t('list.selectedOf', { checked: repeatChecked.size, total: lastListItems.length })}
               </Text>
             </View>
           </View>
@@ -1684,7 +1684,7 @@ export default function ListScreen() {
               {repeating
                 ? <ActivityIndicator size="small" color="#FFFFFF" />
                 : <Text style={styles.repeatAddBtnText}>
-                    Add {repeatChecked.size} item{repeatChecked.size !== 1 ? 's' : ''} to my list
+                    {t('list.repeatAddBtn', { count: repeatChecked.size })}
                   </Text>
               }
             </TouchableOpacity>

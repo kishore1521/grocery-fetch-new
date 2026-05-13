@@ -10,32 +10,10 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { onboardingData } from '../../lib/onboardingState'
-
-// ─── Option button data ───────────────────────────────────────────────────────
-
-const HOUSEHOLD_OPTIONS = [
-  { label: 'Just me', value: '1' },
-  { label: '2', value: '2' },
-  { label: '3–4', value: '3-4' },
-  { label: '5+', value: '5+' },
-]
-
-const BUDGET_OPTIONS = [
-  { label: '< $100', value: 'under100' },
-  { label: '$100–200', value: '100-200' },
-  { label: '$200–300', value: '200-300' },
-  { label: '$300+', value: '300+' },
-]
-
-const FREQUENCY_OPTIONS = [
-  { label: 'Daily', value: 'daily' },
-  { label: 'Few times\na week', value: '2-3week' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Every\n2 weeks', value: 'biweekly' },
-]
 
 // ─── Reusable option row ──────────────────────────────────────────────────────
 
@@ -79,7 +57,29 @@ function OptionRow({ options, selected, onSelect, twoColumn = false }: OptionRow
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function Step3Household() {
+  const { t } = useTranslation()
   const { isGuest } = useAuthStore()
+
+  const HOUSEHOLD_OPTIONS = [
+    { label: t('onboarding.household.justMe'), value: '1' },
+    { label: '2', value: '2' },
+    { label: '3–4', value: '3-4' },
+    { label: '5+', value: '5+' },
+  ]
+
+  const BUDGET_OPTIONS = [
+    { label: '< $100', value: 'under100' },
+    { label: '$100–200', value: '100-200' },
+    { label: '$200–300', value: '200-300' },
+    { label: '$300+', value: '300+' },
+  ]
+
+  const FREQUENCY_OPTIONS = [
+    { label: t('onboarding.household.daily'), value: 'daily' },
+    { label: t('onboarding.household.fewTimesWeek'), value: '2-3week' },
+    { label: t('onboarding.household.weekly'), value: 'weekly' },
+    { label: t('onboarding.household.everyTwoWeeks'), value: 'biweekly' },
+  ]
 
   const [householdSize, setHouseholdSize] = useState<string | null>(null)
   const [weeklyBudget, setWeeklyBudget] = useState<string | null>(null)
@@ -125,14 +125,15 @@ export default function Step3Household() {
           household_size: householdSize,
           weekly_budget: weeklyBudget,
           shopping_frequency: shoppingFrequency,
+          language: onboardingData.language,
         }, { onConflict: 'user_id' })
 
       if (error) throw error
 
       router.replace('/onboarding/complete')
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Please try again.'
-      setError('Unable to save preferences. ' + msg)
+      const msg = e instanceof Error ? e.message : t('common.error')
+      setError(t('onboarding.household.errorSave') + ' ' + msg)
     } finally {
       setLoading(false)
     }
@@ -159,19 +160,21 @@ export default function Step3Household() {
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.replace('/onboarding/step2-stores')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.stepCounter}>3 of 3</Text>
+          <Text style={styles.stepCounter}>
+            {t('onboarding.stepCounter', { step: 4, total: 4 })}
+          </Text>
         </View>
 
-        <Text style={styles.title}>Tell us about{'\n'}your household</Text>
-        <Text style={styles.subtitle}>This helps us personalize your experience</Text>
+        <Text style={styles.title}>{t('onboarding.household.title')}</Text>
+        <Text style={styles.subtitle}>{t('onboarding.household.subtitle')}</Text>
 
         {/* Section 1: Household size */}
-        <Text style={styles.sectionLabel}>How many people do you shop for?</Text>
+        <Text style={styles.sectionLabel}>{t('onboarding.household.size')}</Text>
         <OptionRow
           options={HOUSEHOLD_OPTIONS}
           selected={householdSize}
@@ -180,7 +183,7 @@ export default function Step3Household() {
 
         {/* Section 2: Weekly budget */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
-          Weekly grocery budget?
+          {t('onboarding.household.budget')}
         </Text>
         <OptionRow
           options={BUDGET_OPTIONS}
@@ -190,7 +193,7 @@ export default function Step3Household() {
 
         {/* Section 3: Shopping frequency */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
-          How often do you shop?
+          {t('onboarding.household.frequency')}
         </Text>
         <OptionRow
           options={FREQUENCY_OPTIONS}
@@ -213,7 +216,7 @@ export default function Step3Household() {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.continueButtonText}>Let's start saving! 🛒</Text>
+            <Text style={styles.continueButtonText}>{t('onboarding.household.cta')}</Text>
           )}
         </TouchableOpacity>
       </View>

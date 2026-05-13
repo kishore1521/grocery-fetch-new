@@ -792,6 +792,40 @@ DO NOT BUILD (V2+):
 
 ---
 
+## BRANCHING STRATEGY — MANDATORY
+
+Every feature lives on its own branch. Never build directly on main.
+
+### Branch naming
+```
+feature/i18n-language          ← language selection (FIRST to merge — foundational)
+feature/household-sharing      ← already built locally, not yet merged
+feature/budget                 ← future
+feature/home-screen            ← future
+feature/receipts               ← future
+```
+
+### Rules
+1. Always branch from main: `git checkout main && git checkout -b feature/name`
+2. Before merging any feature → pull latest main into the feature branch first
+3. `feature/i18n-language` MUST merge to main before any other feature is created or merged
+   Reason: i18n is cross-cutting — every string in every screen uses it.
+   If another feature merges before i18n, it will have hardcoded strings that need to be
+   retrofitted later. Build the foundation first.
+4. After i18n merges to main, every new feature uses `t('key')` from day one — never hardcode strings
+
+### Current branch state (May 2026)
+- `main` = clean, through "Repeat last trip" commit. Weeks 1–3 complete.
+- `feature/household-sharing` = local only, not pushed. Contains Week 4 household work.
+- Next branch to create: `feature/i18n-language` off main
+
+### Merge order going forward
+1. `feature/i18n-language` → main  (do this first)
+2. `feature/household-sharing` → merge main into it → add t() calls → merge to main
+3. All other features → branch from main (already has i18n) → build → merge to main
+
+---
+
 ## WHAT TO DO AT THE START OF EVERY CLAUDE CODE SESSION
 
 1. Tell Claude Code: "Read CLAUDE.md before doing anything"
@@ -804,12 +838,22 @@ DO NOT BUILD (V2+):
 
 ## CURRENT STATUS
 
-Week: 4 — Profile + Household Sharing (complete)
+Week: 4 — Profile + Household Sharing (merged to main)
 Active branch: main
-Last completed: Household sharing with invite codes, Realtime list sync, profile tab
+Last completed: Household sharing with invite codes, Realtime list sync, profile tab, i18n across all screens
 Currently building: Week 4 remainder (Budget setup, Home screen, Account deletion)
 Known issues: None
 Next action: Budget setup + Home screen, then Account deletion to complete Week 4
+
+### What's done (on main)
+- Week 1: Auth, signup, onboarding, route guard
+- Week 2: My List tab, add product/custom item, check off, delete, repeat last list
+- Week 3: Live cost estimate, Where to Shop, price search, product detail
+- i18n: English / Korean / Spanish — all screens, saved to Supabase, live switching
+  - step1-language.tsx as first onboarding step
+  - Guest mode removed
+  - Back-swipe to auth/onboarding fixed (router.replace throughout)
+- Week 4 partial: Profile tab, household sharing with invite codes, Realtime sync
 
 ---
 
@@ -840,6 +884,11 @@ Next action: Budget setup + Home screen, then Account deletion to complete Week 
 | May 2026 | Fintech design system — hero+sheet layout on every screen | Inspired by Robinhood/Cash App/Instacart. Dark green gradient hero, white rounded sheet, #00A651 primary. Applied to all tabs. |
 | May 2026 | Switched from NativeWind to StyleSheet | NativeWind className approach abandoned — all styles now use React Native StyleSheet directly |
 | May 2026 | 5-tab layout: Home, Search, Scan, List, Profile | Center Scan tab is elevated green circle button routing to /receipt/upload |
+| May 2026 | Feature branch strategy — never build on main | Each feature gets its own branch; merge to main only when ready to ship |
+| May 2026 | i18n merges to main FIRST before any other feature | Language is cross-cutting; all future branches must inherit it to avoid retrofitting |
+| May 2026 | Language tied to account, not device | Saved in user_preferences.language, loaded via authStore — syncs across devices |
+| May 2026 | Language as first onboarding step | New step1-language.tsx added; existing step1-zip/step2-stores/step3-household shift +1 |
+| May 2026 | i18n package: i18next + react-i18next + expo-localization | Industry standard, works well with React Native, Claude Code knows it deeply |
 | May 2026 | Household sharing via invite code not email | Simpler UX — owner generates 6-char code, member types it in; no email required |
 | May 2026 | Unique constraint on household_members.owner_user_id | One active household per owner; required for upsert onConflict in generateCode flow |
 | May 2026 | listRefreshKey in Zustand for cross-component refresh | Profile bumps key after join/leave; List watches key in useEffect deps to re-fetch |

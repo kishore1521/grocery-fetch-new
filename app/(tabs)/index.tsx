@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Path, Circle, Line } from 'react-native-svg'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { colors } from '../../constants/colors'
 import { useAuthStore } from '../../stores/authStore'
@@ -69,6 +70,7 @@ function TagIcon() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { t } = useTranslation()
   const { session, isGuest } = useAuthStore()
   const { items } = useListStore()
   const [prefs, setPrefs] = useState<UserPreferences | null>(null)
@@ -76,7 +78,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true)
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const greeting = hour < 12 ? t('home.goodMorning') : hour < 17 ? t('home.goodAfternoon') : t('home.goodEvening')
   const firstName = (session?.user?.user_metadata?.first_name as string | undefined) ?? 'Shopper'
   const zipCode = prefs?.zip_code ?? 'Long Island'
 
@@ -127,7 +129,7 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity
                 style={styles.bellBtn}
-                onPress={() => Alert.alert('Notifications', 'Coming soon!')}
+                onPress={() => Alert.alert(t('home.notifications'), t('home.comingSoon'))}
                 activeOpacity={0.7}
               >
                 <BellIcon />
@@ -165,16 +167,16 @@ export default function HomeScreen() {
                   <>
                     <View style={styles.savingsTopRow}>
                       <Text style={styles.savingsSparkle}>✨</Text>
-                      <Text style={styles.savingsStartTitle}>Start saving today</Text>
+                      <Text style={styles.savingsStartTitle}>{t('home.startSavingToday')}</Text>
                     </View>
                     <Text style={styles.savingsBodyText}>
-                      Scan your first receipt after shopping to see how much you're saving vs other Long Island stores.
+                      {t('home.startSavingBody')}
                     </Text>
                     <View style={styles.howItWorksRow}>
                       {[
-                        { icon: '🛒', label: 'Build list' },
-                        { icon: '🛍', label: 'Shop' },
-                        { icon: '📷', label: 'Scan' },
+                        { icon: '🛒', label: t('home.buildList') },
+                        { icon: '🛍', label: t('home.shop') },
+                        { icon: '📷', label: t('home.scan') },
                       ].map((step, i) => (
                         <View key={step.label} style={styles.howItWorksStep}>
                           {i > 0 && <Text style={styles.stepArrow}>→</Text>}
@@ -192,23 +194,25 @@ export default function HomeScreen() {
                   <>
                     <View style={styles.savingsTopRow}>
                       <Text style={styles.trophyIcon}>🏆</Text>
-                      <Text style={styles.thisMonthLabel}>THIS MONTH</Text>
+                      <Text style={styles.thisMonthLabel}>{t('home.thisMonth')}</Text>
                       <View style={{ flex: 1 }} />
                       {(prefs.streak_count ?? 0) >= 1 && (
-                        <Text style={styles.streakText}>🔥 {prefs.streak_count} week streak</Text>
+                        <Text style={styles.streakText}>
+                          {t('home.weekStreak', { count: prefs.streak_count })}
+                        </Text>
                       )}
                     </View>
-                    <Text style={styles.savedLabel}>You've saved</Text>
+                    <Text style={styles.savedLabel}>{t('home.youveSaved')}</Text>
                     <Text style={styles.savedAmount}>
                       ${Number(prefs.total_savings_this_month ?? 0).toFixed(2)}
                     </Text>
                     <View style={styles.savingsFooter}>
                       <Text style={styles.tripsText}>
-                        {prefs.total_receipts_scanned} trip{prefs.total_receipts_scanned !== 1 ? 's' : ''} scanned
+                        {t('home.tripsScanned', { count: prefs.total_receipts_scanned })}
                       </Text>
                       <View style={{ flex: 1 }} />
                       <TouchableOpacity style={styles.sharePill}>
-                        <Text style={styles.sharePillText}>Share →</Text>
+                        <Text style={styles.sharePillText}>{t('home.share')}</Text>
                       </TouchableOpacity>
                     </View>
                   </>
@@ -221,9 +225,11 @@ export default function HomeScreen() {
           {!loading && uncheckedItems.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Your List</Text>
+                <Text style={styles.sectionTitle}>{t('home.yourList')}</Text>
                 <TouchableOpacity onPress={() => router.push('/(tabs)/list')}>
-                  <Text style={styles.sectionLink}>{uncheckedItems.length} items →</Text>
+                  <Text style={styles.sectionLink}>
+                    {t('home.itemCount', { count: uncheckedItems.length })}
+                  </Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.listPreviewCard}>
@@ -242,14 +248,16 @@ export default function HomeScreen() {
                   </View>
                 ))}
                 {extraCount > 0 && (
-                  <Text style={styles.previewMore}>+ {extraCount} more items</Text>
+                  <Text style={styles.previewMore}>
+                    {t('home.moreItems', { count: extraCount })}
+                  </Text>
                 )}
                 <TouchableOpacity
                   style={styles.viewListBtn}
                   onPress={() => router.push('/(tabs)/list')}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.viewListBtnText}>View full list →</Text>
+                  <Text style={styles.viewListBtnText}>{t('home.viewFullList')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -258,9 +266,9 @@ export default function HomeScreen() {
           {/* ── Stores Near You ── */}
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Stores Near You</Text>
+              <Text style={styles.sectionTitle}>{t('home.storesNearYou')}</Text>
               <TouchableOpacity>
-                <Text style={styles.sectionLink}>See all</Text>
+                <Text style={styles.sectionLink}>{t('home.seeAll')}</Text>
               </TouchableOpacity>
             </View>
 

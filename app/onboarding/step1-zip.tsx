@@ -12,9 +12,11 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { onboardingData } from '../../lib/onboardingState'
 
 export default function Step1Zip() {
+  const { t } = useTranslation()
   const [zip, setZip] = useState(onboardingData.zipCode)
   const [focused, setFocused] = useState(false)
 
@@ -22,7 +24,7 @@ export default function Step1Zip() {
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: 33,
+      toValue: 50,
       duration: 300,
       useNativeDriver: false,
     }).start()
@@ -33,7 +35,7 @@ export default function Step1Zip() {
   const handleContinue = () => {
     if (!isComplete) return
     onboardingData.zipCode = zip
-    router.push('/onboarding/step2-stores')
+    router.replace('/onboarding/step2-stores')
   }
 
   const progressWidth = progressAnim.interpolate({
@@ -60,8 +62,16 @@ export default function Step1Zip() {
         >
           {/* Header */}
           <View style={styles.headerRow}>
-            <View style={styles.headerSpacer} />
-            <Text style={styles.stepCounter}>1 of 3</Text>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.replace('/onboarding/step1-language')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.stepCounter}>
+              {t('onboarding.stepCounter', { step: 2, total: 4 })}
+            </Text>
           </View>
 
           {/* Content */}
@@ -72,14 +82,14 @@ export default function Step1Zip() {
               </View>
             </View>
 
-            <Text style={styles.title}>What's your{'\n'}zip code?</Text>
-            <Text style={styles.subtitle}>We'll show you stores and prices near you</Text>
+            <Text style={styles.title}>{t('onboarding.zip.title')}</Text>
+            <Text style={styles.subtitle}>{t('onboarding.zip.subtitle')}</Text>
 
             <TextInput
               style={[styles.zipInput, (focused || isComplete) && styles.zipInputActive]}
               value={zip}
               onChangeText={(text) => setZip(text.replace(/[^0-9]/g, '').slice(0, 5))}
-              placeholder="11590"
+              placeholder={t('onboarding.zip.placeholder')}
               placeholderTextColor="#C5D5CE"
               keyboardType="number-pad"
               maxLength={5}
@@ -89,12 +99,12 @@ export default function Step1Zip() {
             />
 
             {isComplete ? (
-              <Text style={styles.checkmark}>✓ Valid zip code</Text>
+              <Text style={styles.checkmark}>{t('onboarding.zip.valid')}</Text>
             ) : (
               <View style={styles.checkmarkSpacer} />
             )}
 
-            <Text style={styles.helperText}>Long Island zip codes: 11001–11999</Text>
+            <Text style={styles.helperText}>{t('onboarding.zip.helper')}</Text>
           </View>
         </ScrollView>
 
@@ -106,7 +116,7 @@ export default function Step1Zip() {
             disabled={!isComplete}
             activeOpacity={0.85}
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -139,8 +149,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  headerSpacer: {
+  backButton: {
     width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 20,
+    color: '#235347',
   },
   stepCounter: {
     fontSize: 12,

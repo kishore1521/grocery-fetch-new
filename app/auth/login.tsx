@@ -16,8 +16,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Path, Line, Circle, Polygon } from 'react-native-svg'
 import { router } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../stores/authStore'
 import { colors } from '../../constants/colors'
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window')
@@ -195,8 +195,7 @@ function FloatingIcon({ children, xPosition, duration, delay }: FloatingIconProp
 type Tab = 'signin' | 'signup'
 
 export default function LoginScreen() {
-  const { setGuest } = useAuthStore()
-
+  const { t } = useTranslation()
   const headline = useMemo(
     () => HEADLINES[Math.floor(Math.random() * HEADLINES.length)],
     []
@@ -261,7 +260,7 @@ export default function LoginScreen() {
 
     if (activeTab === 'signup') {
       if (firstName.trim().length < 2) {
-        setFirstNameError('First name must be at least 2 characters')
+        setFirstNameError(t('auth.firstNameError'))
         valid = false
       } else {
         setFirstNameError(null)
@@ -269,14 +268,14 @@ export default function LoginScreen() {
     }
 
     if (!email.includes('@') || !email.includes('.')) {
-      setEmailError('Please enter a valid email address')
+      setEmailError(t('auth.emailError'))
       valid = false
     } else {
       setEmailError(null)
     }
 
     if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters')
+      setPasswordError(t('auth.passwordError'))
       valid = false
     } else {
       setPasswordError(null)
@@ -296,11 +295,11 @@ export default function LoginScreen() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       if (msg.includes('Invalid login credentials')) {
-        setError('Email or password is incorrect')
+        setError(t('auth.invalidCredentials'))
       } else if (msg.includes('Email not confirmed')) {
-        setError('Please check your email to confirm your account')
+        setError(t('auth.emailNotConfirmed'))
       } else {
-        setError('Something went wrong. Please try again.')
+        setError(t('common.error'))
       }
     } finally {
       setLoading(false)
@@ -319,18 +318,13 @@ export default function LoginScreen() {
         options: { data: { first_name: firstName } },
       })
       if (error) throw error
-      setSuccessMessage('Check your email to confirm your account')
+      setSuccessMessage(t('auth.checkEmail'))
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      const msg = err instanceof Error ? err.message : t('common.error')
       setError(msg)
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleGuest = () => {
-    setGuest(true)
-    router.replace('/onboarding/step1-zip')
   }
 
   const handleSubmit = () => {
@@ -405,7 +399,7 @@ export default function LoginScreen() {
               onPress={() => switchTab('signin')}
             >
               <Text style={[styles.tabText, activeTab === 'signin' && styles.tabTextActive]}>
-                Sign In
+                {t('auth.signIn')}
               </Text>
             </Pressable>
             <Pressable
@@ -413,7 +407,7 @@ export default function LoginScreen() {
               onPress={() => switchTab('signup')}
             >
               <Text style={[styles.tabText, activeTab === 'signup' && styles.tabTextActive]}>
-                Sign Up
+                {t('auth.signUp')}
               </Text>
             </Pressable>
           </View>
@@ -421,7 +415,7 @@ export default function LoginScreen() {
           {/* First Name — Sign Up only */}
           {activeTab === 'signup' && (
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>FIRST NAME</Text>
+              <Text style={styles.inputLabel}>{t('auth.firstName')}</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -430,7 +424,7 @@ export default function LoginScreen() {
                 ]}
                 value={firstName}
                 onChangeText={setFirstName}
-                placeholder="Your first name"
+                placeholder={t('auth.firstNamePlaceholder')}
                 placeholderTextColor="#8EB69B"
                 autoCapitalize="words"
                 returnKeyType="next"
@@ -444,7 +438,7 @@ export default function LoginScreen() {
 
           {/* Email */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>EMAIL</Text>
+            <Text style={styles.inputLabel}>{t('auth.email')}</Text>
             <TextInput
               ref={emailRef}
               style={[
@@ -454,7 +448,7 @@ export default function LoginScreen() {
               ]}
               value={email}
               onChangeText={setEmail}
-              placeholder="your@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               placeholderTextColor="#8EB69B"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -469,7 +463,7 @@ export default function LoginScreen() {
 
           {/* Password */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>PASSWORD</Text>
+            <Text style={styles.inputLabel}>{t('auth.password')}</Text>
             <View>
               <TextInput
                 ref={passwordRef}
@@ -481,7 +475,7 @@ export default function LoginScreen() {
                 ]}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 6 characters"
+                placeholder={t('auth.passwordPlaceholder')}
                 placeholderTextColor="#8EB69B"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -496,7 +490,9 @@ export default function LoginScreen() {
                 onPress={() => setShowPassword(!showPassword)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.showHideText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                <Text style={styles.showHideText}>
+                  {showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                </Text>
               </Pressable>
             </View>
             {passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
@@ -529,7 +525,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color={colors.white} size="small" />
               ) : (
                 <Text style={styles.primaryButtonText}>
-                  {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
+                  {activeTab === 'signin' ? t('auth.signIn') : t('auth.createAccount')}
                 </Text>
               )}
             </Pressable>
@@ -538,24 +534,16 @@ export default function LoginScreen() {
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>{t('common.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {/* Google button */}
           <Pressable style={styles.googleButton}>
             <Text style={styles.googleG}>G</Text>
-            <Text style={styles.googleText}>Continue with Google</Text>
+            <Text style={styles.googleText}>{t('auth.continueWithGoogle')}</Text>
           </Pressable>
 
-          {/* Guest link */}
-          <Pressable
-            style={styles.guestLink}
-            onPress={handleGuest}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.guestText}>Continue as guest</Text>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -840,15 +828,4 @@ const styles = StyleSheet.create({
     color: '#051F20',
   },
 
-  // ── Guest link ──
-  guestLink: {
-    marginTop: 20,
-    marginBottom: 8,
-    alignItems: 'center',
-  },
-  guestText: {
-    fontSize: 13,
-    color: '#8EB69B',
-    textDecorationLine: 'underline',
-  },
 })
