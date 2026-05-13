@@ -287,13 +287,48 @@ export default function ListScreen() {
     }
   }
 
-  // ── Estimated cost ────────────────────────────────────────────────────────
-  const estimatedCost = React.useMemo(() => {
-    return items.reduce((sum, item) => {
-      if (item.price_at_add) return sum + item.price_at_add * item.quantity
-      return sum
-    }, 0)
+  // ── Animated progress bar ─────────────────────────────────────────────────
+  const progressAnim = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(1)).current
+
+  // ── List metrics ──────────────────────────────────────────────────────────
+  const {
+    estimatedCost,
+    inCartCost,
+    checkedCount,
+    uncheckedCount,
+    pricedCount,
+  } = React.useMemo(() => {
+    const checked = items.filter(i => i.is_checked)
+    const unchecked = items.filter(i => !i.is_checked)
+    return {
+      estimatedCost: unchecked.reduce((s, i) => s + (i.price_at_add ?? 0) * i.quantity, 0),
+      inCartCost: checked.reduce((s, i) => s + (i.price_at_add ?? 0) * i.quantity, 0),
+      checkedCount: checked.length,
+      uncheckedCount: unchecked.length,
+      pricedCount: items.filter(i => i.price_at_add != null).length,
+    }
   }, [items])
+
+  // ── Animate progress bar when cost or budget changes ─────────────────────
+  useEffect(() => {
+    const active = checkedCount > 0 ? inCartCost : estimatedCost
+    const target = budget && budget > 0 ? Math.min(active / budget, 1) : 0
+    Animated.spring(progressAnim, {
+      toValue: target,
+      useNativeDriver: false,
+      tension: 60,
+      friction: 10,
+    }).start()
+  }, [estimatedCost, inCartCost, budget, checkedCount]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fade numbers when key values change ───────────────────────────────────
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.4, duration: 80, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1,   duration: 180, useNativeDriver: true }),
+    ]).start()
+  }, [estimatedCost, inCartCost, checkedCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Group items by category ───────────────────────────────────────────────
   const groupedSections = React.useMemo(() => {
@@ -309,9 +344,12 @@ export default function ListScreen() {
   }, [items])
 
   const allChecked = items.length > 0 && items.every(i => i.is_checked)
-  const budgetProgress = budget && budget > 0 ? Math.min(spentSoFar / budget, 1) : 0
-  const budgetRemaining = budget ? Math.max(budget - spentSoFar, 0) : null
-  const isOverBudget = budget ? spentSoFar > budget : false
+  const isShopping = checkedCount > 0 && !allChecked
+  const activeAmount = isShopping ? inCartCost : estimatedCost
+  const budgetRemaining = budget ? Math.max(budget - activeAmount, 0) : null
+  const isOverBudget = budget ? activeAmount > budget : false
+  const progressRatio = budget && budget > 0 ? Math.min(activeAmount / budget, 1) : 0
+  const progressColor = progressRatio > 0.9 ? '#FCA5A5' : progressRatio > 0.7 ? '#FCD34D' : 'rgba(255,255,255,0.9)'
 
   // ─────────────────────────────────────────────────────────────────────────
   // Loading state
@@ -396,71 +434,112 @@ export default function ListScreen() {
 
         <SafeAreaView edges={['top']}>
           <View style={styles.heroInner}>
-            {/* Top row */}
+
+            {/* ── Top row: label + clear button ── */}
             <View style={styles.heroTopRow}>
               <View>
                 <Text style={styles.heroLabel}>GROCERY LIST</Text>
-                <Text style={styles.heroTitle}>My List</Text>
+                <Text style={styles.heroTitle}>
+                  {isShopping ? `In Cart · ${checkedCount} of ${items.length}` : 'My List'}
+                </Text>
               </View>
-              {items.some(i => i.is_checked) && (
+              {checkedCount > 0 && (
                 <TouchableOpacity onPress={clearChecked} style={styles.heroClearBtn}>
                   <Text style={styles.heroClearText}>Clear done</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Budget stats row */}
-            <View style={styles.heroStatsRow}>
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatValue}>{items.length}</Text>
-                <Text style={styles.heroStatLabel}>items</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatValue}>
-                  {estimatedCost > 0 ? `$${estimatedCost.toFixed(0)}` : '$--'}
-                </Text>
-                <Text style={styles.heroStatLabel}>est. cost</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <TouchableOpacity
-                style={styles.heroStat}
-                onPress={() => {
-                  setBudgetInput(budget ? budget.toFixed(0) : '')
-                  setBudgetModalVisible(true)
-                }}
-              >
-                {budget ? (
-                  <>
-                    <Text style={[
-                      styles.heroStatValue,
-                      isOverBudget && { color: '#FCA5A5' },
-                    ]}>
-                      ${budgetRemaining?.toFixed(0)}
+            {/* ── Summary card ── */}
+            <View style={styles.summaryCard}>
+
+              {/* Big amount */}
+              <Animated.View style={[styles.summaryAmountRow, { opacity: fadeAnim }]}>
+                <View style={styles.summaryAmountLeft}>
+                  <Text style={styles.summaryAmountLabel}>
+                    {isShopping ? 'SPENT SO FAR' : 'ESTIMATED COST'}
+                  </Text>
+                  <Text style={[styles.summaryAmount, isOverBudget && styles.summaryAmountOver]}>
+                    {activeAmount > 0
+                      ? `$${activeAmount.toFixed(2)}`
+                      : pricedCount === 0 && items.length > 0
+                        ? '$—'
+                        : '$0.00'}
+                  </Text>
+                  {isShopping && uncheckedCount > 0 && estimatedCost > 0 && (
+                    <Text style={styles.summarySubAmount}>
+                      +~${estimatedCost.toFixed(2)} still in list
                     </Text>
-                    <Text style={styles.heroStatLabel}>left of ${budget.toFixed(0)}</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.heroStatValueMuted}>Set budget</Text>
-                    <Text style={styles.heroStatLabel}>tap to add</Text>
-                  </>
-                )}
+                  )}
+                </View>
+
+                {/* Stat pills stacked right */}
+                <View style={styles.summaryPills}>
+                  <View style={styles.summaryPill}>
+                    <Text style={styles.summaryPillValue}>{items.length}</Text>
+                    <Text style={styles.summaryPillLabel}>items</Text>
+                  </View>
+                  {checkedCount > 0 && (
+                    <View style={[styles.summaryPill, styles.summaryPillGreen]}>
+                      <Text style={[styles.summaryPillValue, styles.summaryPillValueGreen]}>{checkedCount}</Text>
+                      <Text style={[styles.summaryPillLabel, styles.summaryPillLabelGreen]}>done</Text>
+                    </View>
+                  )}
+                  <View style={styles.summaryPill}>
+                    <Text style={styles.summaryPillValue}>{pricedCount}/{items.length}</Text>
+                    <Text style={styles.summaryPillLabel}>priced</Text>
+                  </View>
+                </View>
+              </Animated.View>
+
+              {/* Divider */}
+              <View style={styles.summaryDivider} />
+
+              {/* Progress bar + budget row */}
+              <TouchableOpacity
+                style={styles.summaryBudgetRow}
+                onPress={() => { setBudgetInput(budget ? budget.toFixed(0) : ''); setBudgetModalVisible(true) }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.summaryBudgetLeft}>
+                  {budget ? (
+                    <>
+                      <View style={styles.summaryBarTrack}>
+                        <Animated.View style={[
+                          styles.summaryBarFill,
+                          {
+                            width: progressAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0%', '100%'],
+                            }),
+                            backgroundColor: isOverBudget ? '#FCA5A5'
+                              : progressRatio > 0.75 ? '#FCD34D'
+                              : 'rgba(255,255,255,0.9)',
+                          },
+                        ]} />
+                      </View>
+                      <Text style={[styles.summaryBudgetText, isOverBudget && styles.summaryBudgetTextOver]}>
+                        {isOverBudget
+                          ? `$${(activeAmount - budget).toFixed(2)} over $${budget.toFixed(0)} budget`
+                          : `$${budgetRemaining?.toFixed(2)} left of $${budget.toFixed(0)} budget`}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.summaryBudgetCta}>Set a budget for this trip</Text>
+                  )}
+                </View>
+                <View style={styles.summaryEditBtn}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                    stroke="rgba(255,255,255,0.85)"
+                    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <Path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </Svg>
+                </View>
               </TouchableOpacity>
+
             </View>
 
-            {/* Budget progress bar */}
-            {budget && (
-              <View style={styles.heroBudgetBar}>
-                <View style={[
-                  styles.heroBudgetFill,
-                  {
-                    width: `${budgetProgress * 100}%` as `${number}%`,
-                    backgroundColor: isOverBudget ? '#FCA5A5' : 'rgba(255,255,255,0.9)',
-                  },
-                ]} />
-              </View>
-            )}
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -488,6 +567,48 @@ export default function ListScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+          {/* Where to shop entry card */}
+          {uncheckedCount >= 3 && pricedCount >= 3 && !allChecked && (
+            <TouchableOpacity
+              style={styles.whereToShopWrap}
+              onPress={() => router.push('/where-to-shop')}
+              activeOpacity={0.88}
+            >
+              <LinearGradient
+                colors={[colors.heroDark, colors.heroMid, colors.heroLight]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.whereToShopCard}
+              >
+                {/* Decorative circle */}
+                <View style={styles.whereToShopCircle} />
+
+                <View style={styles.whereToShopLeft}>
+                  <View style={styles.whereToShopIconWrap}>
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+                      stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                      <Path d="M9 22V12h6v10" />
+                    </Svg>
+                  </View>
+                  <View style={styles.whereToShopText}>
+                    <Text style={styles.whereToShopLabel}>PRICE COMPARISON</Text>
+                    <Text style={styles.whereToShopTitle}>Where to Shop</Text>
+                    <Text style={styles.whereToShopSub}>
+                      {pricedCount} items · tap to compare all stores
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.whereToShopArrow}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+                    stroke="rgba(255,255,255,0.8)" strokeWidth={2.5} strokeLinecap="round">
+                    <Path d="M9 18l6-6-6-6" />
+                  </Svg>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
 
         {/* ── SECTION LIST ── */}
         <SectionList
@@ -1387,50 +1508,125 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  heroStatsRow: {
+  summaryCard: {
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    padding: 16,
+  },
+  summaryAmountRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  heroStat: {
+  summaryAmountLeft: {
     flex: 1,
-    alignItems: 'center',
+    marginRight: 12,
   },
-  heroStatDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  summaryAmountLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 1.1,
+    marginBottom: 4,
   },
-  heroStatValue: {
-    fontSize: 20,
+  summaryAmount: {
+    fontSize: 38,
     fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.3,
+    letterSpacing: -1.5,
+    lineHeight: 42,
   },
-  heroStatValueMuted: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+  summaryAmountOver: {
+    color: '#FCA5A5',
   },
-  heroStatLabel: {
-    fontSize: 10,
+  summarySubAmount: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 4,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.6)',
-    marginTop: 2,
   },
-  heroBudgetBar: {
-    height: 4,
+  summaryPills: {
+    gap: 6,
+    alignItems: 'flex-end',
+  },
+  summaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  summaryPillGreen: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 2,
+  },
+  summaryPillValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  summaryPillValueGreen: {
+    color: '#FFFFFF',
+  },
+  summaryPillLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.65)',
+    fontWeight: '500',
+  },
+  summaryPillLabelGreen: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginBottom: 12,
+  },
+  summaryBudgetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  summaryBudgetLeft: {
+    flex: 1,
+    gap: 7,
+  },
+  summaryBarTrack: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  heroBudgetFill: {
-    height: 4,
-    borderRadius: 2,
+  summaryBarFill: {
+    height: 5,
+    borderRadius: 3,
+  },
+  summaryBudgetText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+  },
+  summaryBudgetTextOver: {
+    color: '#FCA5A5',
+    fontWeight: '700',
+  },
+  summaryBudgetCta: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '600',
+  },
+  summaryEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ── White sheet ───────────────────────────────────────────────────────────
@@ -1652,6 +1848,79 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
+  },
+
+  // Where to shop card
+  whereToShopWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 16,
+    shadowColor: colors.heroDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  whereToShopCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  whereToShopCircle: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    right: -20,
+    top: -30,
+  },
+  whereToShopLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  whereToShopIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whereToShopText: {
+    flex: 1,
+    gap: 2,
+  },
+  whereToShopLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1.1,
+    marginBottom: 1,
+  },
+  whereToShopTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  whereToShopSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    fontWeight: '500',
+  },
+  whereToShopArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Empty state
