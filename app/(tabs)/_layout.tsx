@@ -1,4 +1,3 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Tabs } from 'expo-router'
 import Svg, { Path, Circle, Line } from 'react-native-svg'
 import { colors } from '../../constants/colors'
@@ -15,6 +14,20 @@ function HomeIcon({ color }: { color: string }) {
   )
 }
 
+function ListIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={1.8} strokeLinecap="round">
+      <Line x1="8" y1="6" x2="21" y2="6" />
+      <Line x1="8" y1="12" x2="21" y2="12" />
+      <Line x1="8" y1="18" x2="21" y2="18" />
+      <Line x1="3" y1="6" x2="3.01" y2="6" />
+      <Line x1="3" y1="12" x2="3.01" y2="12" />
+      <Line x1="3" y1="18" x2="3.01" y2="18" />
+    </Svg>
+  )
+}
+
 function ProfileIcon({ color }: { color: string }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
@@ -22,36 +35,6 @@ function ProfileIcon({ color }: { color: string }) {
       <Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
       <Circle cx="12" cy="7" r="4" />
     </Svg>
-  )
-}
-
-// ─── Center List Button ───────────────────────────────────────────────────────
-
-function ListCenterIcon() {
-  return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none"
-      stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      {/* Cart body */}
-      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-      <Line x1="3" y1="6" x2="21" y2="6" />
-      {/* Plus sign */}
-      <Line x1="12" y1="10" x2="12" y2="16" />
-      <Line x1="9" y1="13" x2="15" y2="13" />
-    </Svg>
-  )
-}
-
-function ListTabButton({ onPress }: { onPress?: () => void }) {
-  return (
-    <TouchableOpacity
-      style={styles.listTabWrap}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <View style={styles.listTabCircle}>
-        <ListCenterIcon />
-      </View>
-    </TouchableOpacity>
   )
 }
 
@@ -86,7 +69,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Search hidden from tab bar — route still accessible */}
+      {/* Search hidden — route still accessible */}
       <Tabs.Screen
         name="search"
         options={{ href: null }}
@@ -95,14 +78,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="list"
         options={{
-          title: '',
-          tabBarButton: ({ onPress }) => (
-            <ListTabButton onPress={onPress as () => void} />
-          ),
+          title: 'My List',
+          tabBarIcon: ({ color }) => <ListIcon color={color} />,
         }}
       />
 
-      {/* Scan hidden from tab bar — route still accessible for future use */}
+      {/* Scan hidden — route still accessible for future use */}
       <Tabs.Screen
         name="scan"
         options={{ href: null }}
@@ -118,25 +99,3 @@ export default function TabLayout() {
     </Tabs>
   )
 }
-
-const styles = StyleSheet.create({
-  listTabWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginTop: -16,
-  },
-  listTabCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-})
