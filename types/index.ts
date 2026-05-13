@@ -15,6 +15,9 @@ export type Product = {
   brand: string | null
   category: string
   unit: string | null
+  concept: string | null
+  variant_type: string | null
+  size_label: string | null
   image_url: string | null
   upc: string | null
   description: string | null

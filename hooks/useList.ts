@@ -120,6 +120,7 @@ export function useList() {
     productId: string,
     quantity = 1,
     unit?: string,
+    priceAtAdd?: number,
   ) => {
     const existing = items.find(i => i.product_id === productId)
     if (existing) {
@@ -137,7 +138,7 @@ export function useList() {
         unit: unit ?? null,
         notes: null,
         is_checked: false,
-        price_at_add: null,
+        price_at_add: priceAtAdd ?? null,
       }
       addItem(guestItem)
       return
@@ -152,6 +153,7 @@ export function useList() {
           product_id: productId,
           quantity,
           unit: unit ?? null,
+          price_at_add: priceAtAdd ?? null,
         })
         .select(`
           *,

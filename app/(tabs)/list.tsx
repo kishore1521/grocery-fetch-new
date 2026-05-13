@@ -148,9 +148,6 @@ export default function ListScreen() {
     setEditingItem(null)
   }
 
-  // ── Delete reveal state ───────────────────────────────────────────────────
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-
   // ── Checkbox animations ───────────────────────────────────────────────────
   const checkAnimations = useRef<Record<string, Animated.Value>>({})
 
@@ -503,7 +500,6 @@ export default function ListScreen() {
           keyExtractor={item => item.id}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          onScrollBeginDrag={() => setDeletingId(null)}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <View style={[
@@ -514,67 +510,75 @@ export default function ListScreen() {
               <Text style={styles.sectionCount}>{section.data.length}</Text>
             </View>
           )}
-          renderItem={({ item }) => (
-            <View key={item.id}>
+          renderItem={({ item }) => {
+            const accentColor = CATEGORY_COLORS[item.product?.category || 'other'] || colors.textTertiary
+
+            // Build the detail line: size · brand (for db items) or unit (for custom)
+            const sizeLabel = item.unit  // stored as size_label on add
+            const brand = item.product?.brand ?? null
+            const detailParts = [sizeLabel, brand].filter(Boolean)
+            const detailLine = detailParts.join(' · ')
+
+            const priceDisplay = item.price_at_add != null
+              ? `$${Number(item.price_at_add).toFixed(2)}`
+              : null
+
+            return (
               <TouchableOpacity
-                style={styles.itemCard}
-                onLongPress={() => setDeletingId(item.id)}
-                onPress={() => {
-                  if (deletingId === item.id) {
-                    setDeletingId(null)
-                  } else {
-                    openEditModal(item)
-                  }
-                }}
-                activeOpacity={0.97}
+                key={item.id}
+                style={[styles.itemCard, item.is_checked && styles.itemCardChecked]}
+                onPress={() => openEditModal(item)}
+                activeOpacity={0.92}
               >
-                {/* Category accent */}
-                <View style={[
-                  styles.itemAccent,
-                  { backgroundColor: CATEGORY_COLORS[item.product?.category || 'other'] || colors.textTertiary },
-                ]} />
+                {/* Category accent bar */}
+                <View style={[styles.itemAccent, { backgroundColor: accentColor }]} />
 
                 {/* Checkbox */}
-                <TouchableOpacity onPress={() => handleToggle(item.id)}>
+                <TouchableOpacity
+                  onPress={() => handleToggle(item.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+                >
                   <Animated.View style={[
                     styles.checkbox,
                     item.is_checked && styles.checkboxChecked,
                     { transform: [{ scale: getCheckAnim(item.id) }] },
                   ]}>
-                    {item.is_checked && <Text style={styles.checkmark}>✓</Text>}
+                    {item.is_checked && (
+                      <Svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+                        <Path d="M2 6l3 3 5-5" stroke="#FFFFFF" strokeWidth={2}
+                          strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                    )}
                   </Animated.View>
                 </TouchableOpacity>
 
                 {/* Item info */}
                 <View style={styles.itemContent}>
-                  <Text style={[styles.itemName, item.is_checked && styles.itemNameChecked]}>
+                  <Text style={[styles.itemName, item.is_checked && styles.itemNameChecked]}
+                    numberOfLines={1}>
                     {item.custom_item_name || item.product?.name || 'Item'}
                   </Text>
-                  {item.product?.brand && (
-                    <Text style={styles.itemSub}>
-                      {item.product.brand}{item.unit ? ' · ' + item.unit : ''}
-                    </Text>
+                  {!!detailLine && (
+                    <Text style={styles.itemSub} numberOfLines={1}>{detailLine}</Text>
                   )}
-                  {!item.product?.brand && item.unit && (
-                    <Text style={styles.itemSub}>{item.unit}</Text>
-                  )}
-                  {item.notes && (
-                    <Text style={styles.itemNote}>{item.notes}</Text>
+                  {!!item.notes && (
+                    <Text style={styles.itemNote} numberOfLines={1}>"{item.notes}"</Text>
                   )}
                 </View>
 
-                {/* Qty + price */}
+                {/* Right side: price + qty stepper + delete */}
                 <View style={styles.itemRight}>
+                  {/* Price */}
+                  {priceDisplay && (
+                    <Text style={styles.itemPriceReal}>{priceDisplay}</Text>
+                  )}
+
+                  {/* Qty stepper + trash */}
                   <View style={styles.qtyRow}>
                     <TouchableOpacity
                       style={styles.qtyBtn}
-                      onPress={() => {
-                        if (item.quantity <= 1) {
-                          setDeletingId(item.id)
-                        } else {
-                          updateQuantity(item.id, item.quantity - 1)
-                        }
-                      }}
+                      onPress={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 4 }}
                     >
                       <Text style={styles.qtyBtnText}>−</Text>
                     </TouchableOpacity>
@@ -582,32 +586,28 @@ export default function ListScreen() {
                     <TouchableOpacity
                       style={styles.qtyBtn}
                       onPress={() => updateQuantity(item.id, item.quantity + 1)}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 6 }}
                     >
                       <Text style={styles.qtyBtnText}>+</Text>
                     </TouchableOpacity>
+
+                    {/* Trash */}
+                    <TouchableOpacity
+                      style={styles.trashBtn}
+                      onPress={() => deleteItem(item.id)}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 8 }}
+                    >
+                      <Svg width={15} height={15} viewBox="0 0 24 24" fill="none"
+                        stroke={colors.textTertiary} strokeWidth={2}
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                      </Svg>
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.itemPrice}>{item.product_id ? '$--' : '?'}</Text>
                 </View>
               </TouchableOpacity>
-
-              {deletingId === item.id && (
-                <View style={styles.deleteRow}>
-                  <TouchableOpacity
-                    style={styles.deleteConfirmBtn}
-                    onPress={() => { deleteItem(item.id); setDeletingId(null) }}
-                  >
-                    <Text style={styles.deleteConfirmText}>Remove item</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteCancelBtn}
-                    onPress={() => setDeletingId(null)}
-                  >
-                    <Text style={styles.deleteCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
+            )
+          }}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
@@ -861,8 +861,13 @@ export default function ListScreen() {
                                   <TouchableOpacity
                                     style={styles.addToListBtn}
                                     onPress={() => {
-                                      const msg = `✓ ${selectedOption.store_chain} $${selectedOption.effective_price.toFixed(2)} added!`
-                                      addProductToListById(selectedOption.product_id, 1, undefined)
+                                      const msg = `✓ ${selectedOption.store_chain} · $${selectedOption.effective_price.toFixed(2)} added`
+                                      addProductToListById(
+                                        selectedOption.product_id,
+                                        1,
+                                        selectedOption.size_label || undefined,
+                                        selectedOption.effective_price,
+                                      )
                                       setRecentlyAddedId(selectedOption.product_id)
                                       setSelectedOption(null)
                                       setAddedConfirm(msg)
@@ -1534,55 +1539,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     marginHorizontal: 16,
-    marginBottom: 4,
+    marginBottom: 6,
     borderRadius: 14,
-    padding: 14,
+    paddingVertical: 12,
+    paddingRight: 12,
+    paddingLeft: 0,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
     overflow: 'hidden',
   },
+  itemCardChecked: {
+    opacity: 0.55,
+  },
   itemAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
+    width: 4,
+    alignSelf: 'stretch',
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginRight: 12,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: colors.border,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    marginLeft: 8,
   },
   checkboxChecked: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  checkmark: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
   itemContent: {
     flex: 1,
+    gap: 2,
   },
   itemName: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
+    letterSpacing: -0.1,
   },
   itemNameChecked: {
     textDecorationLine: 'line-through',
@@ -1590,86 +1594,64 @@ const styles = StyleSheet.create({
   },
   itemSub: {
     fontSize: 12,
-    color: colors.textTertiary,
-    marginTop: 2,
+    color: colors.textSecondary,
   },
   itemNote: {
     fontSize: 11,
     color: colors.textTertiary,
     fontStyle: 'italic',
-    marginTop: 1,
   },
   itemRight: {
     alignItems: 'flex-end',
     gap: 4,
-  },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 0,
-  },
-  qtyBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyBtnText: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '600',
-    lineHeight: 20,
-  },
-  qtyCount: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    minWidth: 28,
-    textAlign: 'center',
+    marginLeft: 8,
   },
   itemPrice: {
     fontSize: 12,
     color: colors.textTertiary,
     fontWeight: '500',
+    letterSpacing: 0.1,
   },
-
-  // Delete row
-  deleteRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: -4,
-    marginBottom: 8,
-    gap: 8,
-  },
-  deleteConfirmBtn: {
-    flex: 1,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  deleteConfirmText: {
-    fontSize: 13,
+  itemPriceReal: {
+    color: colors.primary,
     fontWeight: '700',
-    color: colors.red,
+    fontSize: 13,
   },
-  deleteCancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.background,
-    borderRadius: 10,
+  qtyRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 2,
+  },
+  qtyBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  deleteCancelText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
+  qtyBtnText: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  qtyCount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  trashBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
 
   // Empty state

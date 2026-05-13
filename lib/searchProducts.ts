@@ -18,6 +18,8 @@ export interface StoreOption {
   loyalty_name: string | null
   is_best: boolean
   image_url: string | null
+  variant_type: string
+  size_label: string
 }
 
 export interface SizeGroup {
