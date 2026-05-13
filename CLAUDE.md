@@ -830,29 +830,20 @@ feature/receipts               ← future
 
 ## CURRENT STATUS
 
-Active branch: feature/i18n-language (ready to merge to main)
+Active branch: main
 Feature branches: feature/household-sharing (local only, not pushed)
 Currently building: —
 Known issues: None
-Next action: Merge feature/i18n-language → main, then continue Week 4 features
+Next action: Start next feature branch off main
 
 ### What's done (on main)
 - Week 1: Auth, signup, onboarding, route guard
 - Week 2: My List tab, add product/custom item, check off, delete, repeat last list
 - Week 3: Live cost estimate, Where to Shop, price search, product detail
-
-### What's done on feature/i18n-language (ready to merge)
-- Language selection: English / Korean / Spanish
-- Language picker on signup form + as first onboarding step (step1-language.tsx)
-- Existing onboarding steps shifted: zip=step2, stores=step3, household=step4
-- Language saved to user_preferences.language in Supabase (upserted on onboarding complete)
-- Language loaded on login for returning users (checkOnboarding in _layout.tsx)
-- Language change from Profile tab (inline pill picker, saves to Supabase live)
-- ALL strings in ALL screens wrapped in t(): index, search, list, profile, auth, onboarding
-- i18next + react-i18next, compatibilityJSON: 'v4', useSuspense: false
-- lib/i18n.ts initializes i18n; imported in _layout.tsx so it runs before any screen renders
-- authStore extended: language field + setLanguage() action (calls i18n.changeLanguage)
-- locales/en.json, ko.json, es.json — complete translations for all sections
+- i18n: English / Korean / Spanish — all screens, saved to Supabase, live switching
+  - step1-language.tsx as first onboarding step
+  - Guest mode removed
+  - Back-swipe to auth/onboarding fixed (router.replace throughout)
 
 ### What's built but not yet on main
 - Week 4 partial: Profile tab, household sharing with invite codes, Realtime sync
