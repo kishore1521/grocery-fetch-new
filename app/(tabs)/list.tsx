@@ -133,6 +133,31 @@ export default function ListScreen() {
   const [miniFormUnit, setMiniFormUnit] = useState('each')
   const [miniFormNote, setMiniFormNote] = useState('')
 
+  // ── New list UI toggle ────────────────────────────────────────────────────
+  const USE_NEW_LIST_UI = true
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
+  const [inlineUnit, setInlineUnit] = useState('each')
+  const [inlineNote, setInlineNote] = useState('')
+
+  const openInline = (item: GroceryListItem) => {
+    if (expandedItemId === item.id) {
+      setExpandedItemId(null)
+    } else {
+      setInlineUnit(item.unit ?? 'each')
+      setInlineNote(item.notes ?? '')
+      setExpandedItemId(item.id)
+    }
+  }
+
+  const saveInline = async (item: GroceryListItem) => {
+    await updateItem(item.id, {
+      quantity: item.quantity,
+      unit: inlineUnit || null,
+      notes: inlineNote.trim() || null,
+    })
+    setExpandedItemId(null)
+  }
+
   // ── Edit item modal state ─────────────────────────────────────────────────
   const [editingItem, setEditingItem] = useState<GroceryListItem | null>(null)
   const [editQty, setEditQty] = useState(1)
@@ -833,27 +858,187 @@ export default function ListScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeader}>
-              <View style={[
-                styles.sectionDot,
-                { backgroundColor: CATEGORY_COLORS[section.title] || colors.textTertiary },
-              ]} />
-              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
-              <Text style={styles.sectionCount}>{section.data.length}</Text>
-            </View>
+            USE_NEW_LIST_UI ? (
+              <View style={styles.v2SectionHeader}>
+                <View style={[styles.v2SectionDot, { backgroundColor: CATEGORY_COLORS[section.title] || colors.textTertiary }]} />
+                <Text style={styles.v2SectionTitle}>{section.title.toUpperCase()}</Text>
+                <View style={styles.v2SectionLine} />
+                <Text style={styles.v2SectionCount}>{section.data.length}</Text>
+              </View>
+            ) : (
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionDot, { backgroundColor: CATEGORY_COLORS[section.title] || colors.textTertiary }]} />
+                <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+                <Text style={styles.sectionCount}>{section.data.length}</Text>
+              </View>
+            )
           )}
           renderItem={({ item }) => {
             const accentColor = CATEGORY_COLORS[item.product?.category || 'other'] || colors.textTertiary
-
-            // Build the detail line: size · brand (for db items) or unit (for custom)
-            const sizeLabel = item.unit  // stored as size_label on add
+            const sizeLabel = item.unit
             const brand = item.product?.brand ?? null
             const detailParts = [sizeLabel, brand].filter(Boolean)
             const detailLine = detailParts.join(' · ')
-
             const priceDisplay = item.price_at_add != null
               ? `$${Number(item.price_at_add).toFixed(2)}`
               : null
+            const isExpanded = expandedItemId === item.id
+
+            if (USE_NEW_LIST_UI) {
+              return (
+                <View key={item.id} style={styles.v2ItemWrap}>
+
+                  {/* ── Main row ── */}
+                  <TouchableOpacity
+                    style={styles.v2Row}
+                    onPress={() => openInline(item)}
+                    activeOpacity={0.7}
+                  >
+                    {/* Circle checkbox */}
+                    <TouchableOpacity
+                      onPress={() => handleToggle(item.id)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}
+                      style={styles.v2CheckWrap}
+                    >
+                      <Animated.View style={[
+                        styles.v2Circle,
+                        item.is_checked && { backgroundColor: accentColor, borderColor: accentColor },
+                        !item.is_checked && { borderColor: accentColor },
+                        { transform: [{ scale: getCheckAnim(item.id) }] },
+                      ]}>
+                        {item.is_checked && (
+                          <Svg width={11} height={11} viewBox="0 0 12 12" fill="none">
+                            <Path d="M2 6l3 3 5-5" stroke="#FFFFFF" strokeWidth={2.2}
+                              strokeLinecap="round" strokeLinejoin="round" />
+                          </Svg>
+                        )}
+                      </Animated.View>
+                    </TouchableOpacity>
+
+                    {/* Name + subtitle */}
+                    <View style={styles.v2ItemBody}>
+                      <Text style={[styles.v2ItemName, item.is_checked && styles.v2ItemNameChecked]}
+                        numberOfLines={1}>
+                        {item.custom_item_name || item.product?.name || 'Item'}
+                      </Text>
+                      {(!!detailLine || !!item.notes) && (
+                        <Text style={styles.v2ItemSub} numberOfLines={1}>
+                          {[detailLine, item.notes ? `"${item.notes}"` : null].filter(Boolean).join(' · ')}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Right: qty badge + price */}
+                    <View style={styles.v2ItemRight}>
+                      {item.quantity > 1 && (
+                        <View style={styles.v2QtyBadge}>
+                          <Text style={styles.v2QtyBadgeText}>{item.quantity}×</Text>
+                        </View>
+                      )}
+                      {priceDisplay && (
+                        <Text style={[styles.v2Price, item.is_checked && styles.v2PriceChecked]}>
+                          {priceDisplay}
+                        </Text>
+                      )}
+                      {/* Chevron */}
+                      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                        stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round">
+                        <Path d={isExpanded ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'} />
+                      </Svg>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* ── Inline expanded panel ── */}
+                  {isExpanded && (
+                    <View style={styles.v2Expanded}>
+
+                      {/* Quantity stepper */}
+                      <View style={styles.v2ExpandRow}>
+                        <Text style={styles.v2ExpandLabel}>{t('list.quantity')}</Text>
+                        <View style={styles.v2Stepper}>
+                          <TouchableOpacity
+                            style={styles.v2StepBtn}
+                            onPress={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          >
+                            <Text style={styles.v2StepBtnText}>−</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.v2StepCount}>{item.quantity}</Text>
+                          <TouchableOpacity
+                            style={styles.v2StepBtn}
+                            onPress={() => updateQuantity(item.id, item.quantity + 1)}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          >
+                            <Text style={styles.v2StepBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Unit picker */}
+                      <View style={styles.v2ExpandRow}>
+                        <Text style={styles.v2ExpandLabel}>{t('list.unit')}</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                          style={styles.v2UnitScroll} contentContainerStyle={styles.v2UnitScrollContent}>
+                          {UNIT_OPTIONS.map(u => (
+                            <TouchableOpacity
+                              key={u}
+                              style={[styles.v2UnitChip, inlineUnit === u && styles.v2UnitChipActive]}
+                              onPress={() => setInlineUnit(u)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.v2UnitChipText, inlineUnit === u && styles.v2UnitChipTextActive]}>
+                                {u}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+
+                      {/* Note input */}
+                      <View style={styles.v2ExpandRow}>
+                        <Text style={styles.v2ExpandLabel}>{t('list.note')}</Text>
+                        <TextInput
+                          style={styles.v2NoteInput}
+                          value={inlineNote}
+                          onChangeText={setInlineNote}
+                          placeholder={t('list.notePlaceholder')}
+                          placeholderTextColor={colors.textTertiary}
+                          returnKeyType="done"
+                          onSubmitEditing={() => saveInline(item)}
+                        />
+                      </View>
+
+                      {/* Action row: Save + Delete */}
+                      <View style={styles.v2ActionRow}>
+                        <TouchableOpacity
+                          style={styles.v2DeleteBtn}
+                          onPress={() => { deleteItem(item.id); setExpandedItemId(null) }}
+                          activeOpacity={0.75}
+                        >
+                          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                            stroke={colors.red} strokeWidth={2}
+                            strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                          </Svg>
+                          <Text style={styles.v2DeleteBtnText}>{t('common.delete')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.v2SaveBtn}
+                          onPress={() => saveInline(item)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.v2SaveBtnText}>{t('common.save')}</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                    </View>
+                  )}
+
+                  {/* Separator */}
+                  <View style={styles.v2Separator} />
+                </View>
+              )
+            }
 
             return (
               <TouchableOpacity
@@ -900,12 +1085,9 @@ export default function ListScreen() {
 
                 {/* Right side: price + qty stepper + delete */}
                 <View style={styles.itemRight}>
-                  {/* Price */}
                   {priceDisplay && (
                     <Text style={styles.itemPriceReal}>{priceDisplay}</Text>
                   )}
-
-                  {/* Qty stepper + trash */}
                   <View style={styles.qtyRow}>
                     <TouchableOpacity
                       style={styles.qtyBtn}
@@ -922,8 +1104,6 @@ export default function ListScreen() {
                     >
                       <Text style={styles.qtyBtnText}>+</Text>
                     </TouchableOpacity>
-
-                    {/* Trash */}
                     <TouchableOpacity
                       style={styles.trashBtn}
                       onPress={() => deleteItem(item.id)}
@@ -3417,5 +3597,240 @@ const styles = StyleSheet.create({
     width: 1,
     height: 36,
     backgroundColor: colors.border,
+  },
+
+  // ── v2 List UI (Apple Reminders-style) ────────────────────────────────────
+  v2SectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 6,
+    backgroundColor: colors.background,
+  },
+  v2SectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  v2SectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 1.0,
+    marginRight: 10,
+  },
+  v2SectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+    marginRight: 8,
+  },
+  v2SectionCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+
+  v2ItemWrap: {
+    backgroundColor: '#FFFFFF',
+  },
+  v2Row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minHeight: 52,
+  },
+  v2CheckWrap: {
+    marginRight: 12,
+  },
+  v2Circle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.textTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  v2ItemBody: {
+    flex: 1,
+    marginRight: 8,
+  },
+  v2ItemName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  v2ItemNameChecked: {
+    color: colors.textTertiary,
+    textDecorationLine: 'line-through',
+  },
+  v2ItemSub: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 1,
+  },
+  v2ItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  v2QtyBadge: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  v2QtyBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  v2Price: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  v2PriceChecked: {
+    color: colors.textTertiary,
+    textDecorationLine: 'line-through',
+  },
+
+  v2Expanded: {
+    backgroundColor: colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  v2ExpandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  v2ExpandLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+    width: 64,
+    letterSpacing: 0.2,
+  },
+  v2Stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  v2StepBtn: {
+    width: 36,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  v2StepBtnText: {
+    fontSize: 18,
+    fontWeight: '400',
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  v2StepCount: {
+    minWidth: 32,
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 6,
+  },
+  v2UnitScroll: {
+    flex: 1,
+  },
+  v2UnitScrollContent: {
+    gap: 6,
+    paddingRight: 4,
+  },
+  v2UnitChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+  },
+  v2UnitChipActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  v2UnitChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  v2UnitChipTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  v2NoteInput: {
+    flex: 1,
+    height: 36,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  v2ActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+    gap: 10,
+  },
+  v2DeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.redLight,
+    backgroundColor: colors.redLight,
+  },
+  v2DeleteBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.red,
+  },
+  v2SaveBtn: {
+    flex: 1,
+    height: 38,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  v2SaveBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  v2Separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 56,
   },
 })
