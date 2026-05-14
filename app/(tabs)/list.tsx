@@ -368,6 +368,8 @@ export default function ListScreen() {
   // ── Animated progress bar ─────────────────────────────────────────────────
   const progressAnim = useRef(new Animated.Value(0)).current
   const fadeAnim = useRef(new Animated.Value(1)).current
+  const spentAnim = useRef(new Animated.Value(0)).current
+  const plannedAnim = useRef(new Animated.Value(0)).current
 
   // ── List metrics ──────────────────────────────────────────────────────────
   const {
@@ -400,6 +402,17 @@ export default function ListScreen() {
     }).start()
   }, [estimatedCost, inCartCost, budget, checkedCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Animate v2 segmented bar ──────────────────────────────────────────────
+  useEffect(() => {
+    const spentRatio = budget && budget > 0 ? Math.min(inCartCost / budget, 1) : 0
+    const remainingRatio = Math.max(1 - spentRatio, 0)
+    const plannedRatio = budget && budget > 0 ? Math.min(estimatedCost / budget, remainingRatio) : 0
+    Animated.parallel([
+      Animated.spring(spentAnim, { toValue: spentRatio, useNativeDriver: false, tension: 60, friction: 10 }),
+      Animated.spring(plannedAnim, { toValue: plannedRatio, useNativeDriver: false, tension: 60, friction: 10 }),
+    ]).start()
+  }, [estimatedCost, inCartCost, budget]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Fade numbers when key values change ───────────────────────────────────
   useEffect(() => {
     Animated.sequence([
@@ -428,6 +441,18 @@ export default function ListScreen() {
   const isOverBudget = budget ? activeAmount > budget : false
   const progressRatio = budget && budget > 0 ? Math.min(activeAmount / budget, 1) : 0
   const progressColor = progressRatio > 0.9 ? '#FCA5A5' : progressRatio > 0.7 ? '#FCD34D' : 'rgba(255,255,255,0.9)'
+
+  // ── v2 budget card derived values ─────────────────────────────────────────
+  const USE_NEW_BUDGET_CARD = true
+  const v2TotalCommitted = estimatedCost + inCartCost
+  const v2Remaining = budget ? budget - v2TotalCommitted : 0
+  const v2IsOver = budget ? v2TotalCommitted > budget : false
+  const v2StatusText = () => {
+    if (!budget) return t('budgetCard.noBudget')
+    if (v2IsOver) return t('budgetCard.overBudget', { amount: Math.abs(v2Remaining).toFixed(2) })
+    if (budget > 0 && v2Remaining / budget < 0.2) return t('budgetCard.gettingClose', { amount: v2Remaining.toFixed(2) })
+    return t('budgetCard.onTrack', { amount: v2Remaining.toFixed(2) })
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Loading state
@@ -536,6 +561,91 @@ export default function ListScreen() {
             </View>
 
             {/* ── Summary card ── */}
+            {USE_NEW_BUDGET_CARD ? (
+
+            <View style={styles.v2Card}>
+
+              {/* 4-column stats */}
+              <Animated.View style={[styles.v2StatsRow, { opacity: fadeAnim }]}>
+
+                {/* Budget — tappable */}
+                <TouchableOpacity
+                  style={styles.v2StatCol}
+                  onPress={() => { setBudgetInput(budget ? budget.toFixed(0) : ''); setBudgetModalVisible(true) }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.budget')}</Text>
+                  <Text style={[styles.v2StatValue, !budget && styles.v2StatValueDim]}>
+                    {budget ? `$${budget.toFixed(0)}` : '—'}
+                  </Text>
+                  <View style={styles.v2EditHint}>
+                    <Svg width={9} height={9} viewBox="0 0 24 24" fill="none"
+                      stroke="rgba(255,255,255,0.5)" strokeWidth={2.5}
+                      strokeLinecap="round" strokeLinejoin="round">
+                      <Path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                      <Path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </Svg>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.v2StatDivider} />
+
+                {/* Planned */}
+                <View style={styles.v2StatCol}>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.planned')}</Text>
+                  <Text style={styles.v2StatValue}>
+                    {estimatedCost > 0 ? `$${estimatedCost.toFixed(2)}` : '$—'}
+                  </Text>
+                </View>
+
+                <View style={styles.v2StatDivider} />
+
+                {/* Spent */}
+                <View style={styles.v2StatCol}>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.spent')}</Text>
+                  <Text style={[styles.v2StatValue, inCartCost > 0 && styles.v2StatValueGreen]}>
+                    {inCartCost > 0 ? `$${inCartCost.toFixed(2)}` : '$—'}
+                  </Text>
+                </View>
+
+                <View style={styles.v2StatDivider} />
+
+                {/* Remaining */}
+                <View style={styles.v2StatCol}>
+                  <Text style={styles.v2StatLabel}>{t('budgetCard.remaining')}</Text>
+                  <Text style={[styles.v2StatValue, v2IsOver && styles.v2StatValueRed]}>
+                    {budget
+                      ? (v2IsOver
+                          ? `-$${Math.abs(v2Remaining).toFixed(2)}`
+                          : `$${v2Remaining.toFixed(2)}`)
+                      : '$—'}
+                  </Text>
+                </View>
+
+              </Animated.View>
+
+              {/* Segmented progress bar */}
+              {budget && budget > 0 && (
+                <View style={styles.v2BarTrack}>
+                  <Animated.View style={[
+                    styles.v2BarSpent,
+                    { width: spentAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+                  ]} />
+                  <Animated.View style={[
+                    styles.v2BarPlanned,
+                    { width: plannedAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+                  ]} />
+                </View>
+              )}
+
+              {/* Status line */}
+              <Text style={[styles.v2StatusText, v2IsOver && styles.v2StatusTextOver]}>
+                {v2StatusText()}
+              </Text>
+
+            </View>
+
+            ) : (
             <View style={styles.summaryCard}>
 
               {/* Big amount */}
@@ -624,6 +734,7 @@ export default function ListScreen() {
               </TouchableOpacity>
 
             </View>
+            )}
 
           </View>
         </SafeAreaView>
@@ -1916,6 +2027,85 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // ── v2 Budget card ────────────────────────────────────────────────────────
+  v2Card: {
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  v2StatsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  v2StatCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  v2StatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
+  },
+  v2StatLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  v2StatValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  v2StatValueDim: {
+    color: 'rgba(255,255,255,0.35)',
+  },
+  v2StatValueGreen: {
+    color: '#6EE7B7',
+  },
+  v2StatValueRed: {
+    color: '#FCA5A5',
+  },
+  v2EditHint: {
+    marginTop: 2,
+  },
+  v2BarTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 3,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  v2BarSpent: {
+    height: 6,
+    backgroundColor: '#6EE7B7',
+    borderRadius: 3,
+  },
+  v2BarPlanned: {
+    height: 6,
+    backgroundColor: '#FCD34D',
+    borderRadius: 3,
+  },
+  v2StatusText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
+  v2StatusTextOver: {
+    color: '#FCA5A5',
+    fontWeight: '700',
   },
 
   // ── White sheet ───────────────────────────────────────────────────────────

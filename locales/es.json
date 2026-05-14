@@ -176,6 +176,16 @@
     "repeatAddBtn_one": "Agregar {{count}} artículo a mi lista",
     "repeatAddBtn_other": "Agregar {{count}} artículos a mi lista"
   },
+  "budgetCard": {
+    "budget": "PRESUPUESTO",
+    "planned": "PLANEADO",
+    "spent": "GASTADO",
+    "remaining": "RESTANTE",
+    "onTrack": "En camino · ${{amount}} por asignar",
+    "gettingClose": "⚠️ Casi al límite · ${{amount}} restante",
+    "overBudget": "🔴 ${{amount}} sobre el presupuesto",
+    "noBudget": "Sin presupuesto · toca Presupuesto para agregar"
+  },
   "household": {
     "sectionLabel": "HOGAR",
     "activeTitle": "Hogar activo",
