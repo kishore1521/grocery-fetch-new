@@ -6,7 +6,8 @@
     "save": "Save",
     "or": "or",
     "error": "Something went wrong. Please try again.",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "delete": "Delete"
   },
   "auth": {
     "signIn": "Sign In",
